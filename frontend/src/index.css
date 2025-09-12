@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-500 text-gray-900 hover:bg-secondary-600 focus:ring-secondary-500;
+  }
+
+  .btn-accent {
+    @apply bg-accent-500 text-white hover:bg-accent-600 focus:ring-accent-500;
+  }
+
+  .btn-outline {
+    @apply border border-primary-500 text-primary-500 hover:bg-primary-50 focus:ring-primary-500;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:border-primary-200;
+  }
+
+  /* Classes utilitaires pour les couleurs de marque */
+  .text-brand-primary {
+    @apply text-primary-500;
+  }
+
+  .text-brand-secondary {
+    @apply text-secondary-500;
+  }
+
+  .text-brand-accent {
+    @apply text-accent-500;
+  }
+
+  .bg-brand-primary {
+    @apply bg-primary-500;
+  }
+
+  .bg-brand-secondary {
+    @apply bg-secondary-500;
+  }
+
+  .bg-brand-accent {
+    @apply bg-accent-500;
+  }
+
+  /* Gradient de marque */
+  .bg-brand-gradient {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600;
+  }
+
+  .bg-brand-gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-500 to-secondary-600;
+  }
+}
