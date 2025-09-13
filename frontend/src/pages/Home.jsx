@@ -62,20 +62,25 @@ const Home = () => {
     try {
       setLoading(true);
       
-      // Charger les entreprises en vedette
+      console.log('Chargement des données initiales...');
+      
+      // Charger les entreprises en vedette (toutes les entreprises vérifiées)
       const businessesResponse = await businessService.getAll({
-        premium: true,
         verified: true,
         per_page: 6
       });
+      
+      console.log('Réponse entreprises:', businessesResponse.data);
       setFeaturedBusinesses(businessesResponse.data.data.data);
 
       // Charger les catégories principales
       const categoriesResponse = await categoryService.getAll({ root_only: true });
+      console.log('Réponse catégories:', categoriesResponse.data);
       setCategories(categoriesResponse.data.data.slice(0, 8));
 
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
+      console.error('Détails de l\'erreur:', error.response?.data);
     } finally {
       setLoading(false);
     }

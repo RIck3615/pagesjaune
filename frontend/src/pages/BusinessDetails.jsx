@@ -83,6 +83,46 @@ const BusinessDetails = () => {
   const renderHours = (hours) => {
     if (!hours) return null
     
+    // Si c'est un tableau (structure du backend)
+    if (Array.isArray(hours)) {
+      const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+      return (
+        <div className="space-y-2">
+          {days.map((day) => {
+            const dayData = hours.find(h => h.day === day)
+            if (dayData) {
+              // Si l'entreprise est fermée ce jour
+              if (!dayData.is_open || dayData.is_open === '0' || dayData.is_open === 0) {
+                return (
+                  <div key={day} className="flex justify-between">
+                    <span className="text-gray-600 capitalize">{day}</span>
+                    <span className="font-medium text-red-600">Fermé</span>
+                  </div>
+                )
+              }
+              // Si l'entreprise est ouverte ce jour
+              const timeText = `${dayData.open_time || '09:00'} - ${dayData.close_time || '18:00'}`
+              return (
+                <div key={day} className="flex justify-between">
+                  <span className="text-gray-600 capitalize">{day}</span>
+                  <span className="font-medium text-green-600">{timeText}</span>
+                </div>
+              )
+            } else {
+              // Aucune donnée pour ce jour
+              return (
+                <div key={day} className="flex justify-between">
+                  <span className="text-gray-600 capitalize">{day}</span>
+                  <span className="text-gray-500">Non défini</span>
+                </div>
+              )
+            }
+          })}
+        </div>
+      )
+    }
+    
+    // Si c'est un objet (ancienne structure)
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
     return (
       <div className="space-y-2">
@@ -125,7 +165,7 @@ const BusinessDetails = () => {
         </h1>
         <button
           onClick={() => navigate('/')}
-          className="btn btn-primary"
+          className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
         >
           Retour à l'accueil
         </button>
@@ -163,12 +203,12 @@ const BusinessDetails = () => {
             
             <div className="flex items-center mb-4 space-x-4">
               <div className="flex items-center space-x-1">
-                {renderRating(Math.round(business.average_rating))}
+                {renderRating(Math.round(business.average_rating || 0))}
                 <span className="ml-2 text-lg font-medium text-gray-900">
-                  {business.average_rating.toFixed(1)}
+                  {(business.average_rating || 0).toFixed(1)}
                 </span>
                 <span className="text-gray-500">
-                  ({business.reviews_count} avis)
+                  ({business.reviews_count || 0} avis)
                 </span>
               </div>
             </div>
@@ -181,7 +221,7 @@ const BusinessDetails = () => {
           <div className="mt-6 lg:mt-0 lg:ml-8">
             {business.logo && (
               <img
-                src={business.logo}
+                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
                 alt={`Logo de ${business.name}`}
                 className="object-cover w-32 h-32 border rounded-lg"
               />
@@ -213,7 +253,7 @@ const BusinessDetails = () => {
                   <Phone className="w-5 h-5 text-gray-400" />
                   <a
                     href={`tel:${business.phone}`}
-                    className="text-primary-600 hover:text-primary-700"
+                    className="text-blue-600 hover:text-blue-700"
                   >
                     {business.phone}
                   </a>
@@ -225,7 +265,7 @@ const BusinessDetails = () => {
                   <Mail className="w-5 h-5 text-gray-400" />
                   <a
                     href={`mailto:${business.email}`}
-                    className="text-primary-600 hover:text-primary-700"
+                    className="text-blue-600 hover:text-blue-700"
                   >
                     {business.email}
                   </a>
@@ -239,7 +279,7 @@ const BusinessDetails = () => {
                     href={business.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary-600 hover:text-primary-700"
+                    className="text-blue-600 hover:text-blue-700"
                   >
                     Site web
                   </a>
@@ -258,7 +298,7 @@ const BusinessDetails = () => {
                 {business.categories.map((category) => (
                   <span
                     key={category.id}
-                    className="px-3 py-1 text-sm rounded-full bg-primary-100 text-primary-800"
+                    className="px-3 py-1 text-sm text-blue-800 bg-blue-100 rounded-full"
                   >
                     {category.name}
                   </span>
@@ -271,12 +311,12 @@ const BusinessDetails = () => {
           <div className="p-6 bg-white border rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-900">
-                Avis clients ({business.reviews_count})
+                Avis clients ({business.reviews_count || 0})
               </h2>
               {isAuthenticated && (
                 <button
                   onClick={() => setShowReviewForm(!showReviewForm)}
-                  className="flex items-center space-x-2 btn btn-outline"
+                  className="flex items-center px-4 py-2 space-x-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Laisser un avis</span>
@@ -320,7 +360,7 @@ const BusinessDetails = () => {
                       value={reviewForm.comment}
                       onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
                       rows={4}
-                      className="input"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Partagez votre expérience..."
                     />
                   </div>
@@ -328,14 +368,14 @@ const BusinessDetails = () => {
                     <button
                       type="submit"
                       disabled={submitReviewMutation.isLoading}
-                      className="btn btn-primary"
+                      className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
                     >
                       {submitReviewMutation.isLoading ? 'Envoi...' : 'Envoyer l\'avis'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowReviewForm(false)}
-                      className="btn btn-secondary"
+                      className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300"
                     >
                       Annuler
                     </button>

@@ -66,6 +66,40 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
   useEffect(() => {
     loadCategories();
     if (isEdit && business) {
+      // Convertir les heures d'ouverture du backend vers la structure du formulaire
+      let openingHours = {
+        monday: { open: '', close: '', closed: false },
+        tuesday: { open: '', close: '', closed: false },
+        wednesday: { open: '', close: '', closed: false },
+        thursday: { open: '', close: '', closed: false },
+        friday: { open: '', close: '', closed: false },
+        saturday: { open: '', close: '', closed: false },
+        sunday: { open: '', close: '', closed: false }
+      };
+
+      if (business.opening_hours && Array.isArray(business.opening_hours)) {
+        const dayMapping = {
+          'lundi': 'monday',
+          'mardi': 'tuesday',
+          'mercredi': 'wednesday',
+          'jeudi': 'thursday',
+          'vendredi': 'friday',
+          'samedi': 'saturday',
+          'dimanche': 'sunday'
+        };
+
+        business.opening_hours.forEach(dayData => {
+          const dayKey = dayMapping[dayData.day];
+          if (dayKey) {
+            openingHours[dayKey] = {
+              open: dayData.open_time || '',
+              close: dayData.close_time || '',
+              closed: !dayData.is_open || dayData.is_open === '0' || dayData.is_open === 0
+            };
+          }
+        });
+      }
+
       setFormData({
         name: business.name || '',
         description: business.description || '',
@@ -77,12 +111,15 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
         province: business.province || '',
         latitude: business.latitude || '',
         longitude: business.longitude || '',
-        opening_hours: business.opening_hours || formData.opening_hours
+        opening_hours: openingHours
       });
+      
       setSelectedCategories(business.categories?.map(cat => cat.id) || []);
+      
       if (business.logo) {
         setLogoPreview(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`);
       }
+      
       if (business.images && business.images.length > 0) {
         setImagePreviews(business.images.map(img => 
           `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${img}`
@@ -183,15 +220,19 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
       // Ajouter les données de base
       Object.keys(formData).forEach(key => {
         if (key === 'opening_hours') {
-          // Vérifier que opening_hours est un tableau
-          if (Array.isArray(formData[key])) {
-            formData[key].forEach((day, index) => {
-              data.append(`opening_hours[${index}][day]`, day.day);
-              data.append(`opening_hours[${index}][is_open]`, day.is_open ? '1' : '0');
-              data.append(`opening_hours[${index}][open_time]`, day.open_time || '');
-              data.append(`opening_hours[${index}][close_time]`, day.close_time || '');
-            });
-          }
+          // Convertir l'objet opening_hours en tableau
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          const dayNames = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+          
+          days.forEach((day, index) => {
+            const hours = formData.opening_hours[day];
+            if (hours) {
+              data.append(`opening_hours[${index}][day]`, dayNames[index]);
+              data.append(`opening_hours[${index}][is_open]`, hours.closed ? '0' : '1');
+              data.append(`opening_hours[${index}][open_time]`, hours.open || '');
+              data.append(`opening_hours[${index}][close_time]`, hours.close || '');
+            }
+          });
         } else if (formData[key] !== '') {
           data.append(key, formData[key]);
         }

@@ -1,13 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, Star, Clock, ExternalLink } from 'lucide-react';
-import { formatUtils } from '../../utils/format';
+import { MapPin, Phone, Star, Clock, ExternalLink, Crown, CheckCircle } from 'lucide-react';
 
-const BusinessCard = ({ business, className = "" }) => {
+const BusinessCard = ({ business, className = "", onBusinessClick }) => {
   const {
     id,
     name,
-    slug,
     description,
     address,
     city,
@@ -19,16 +17,17 @@ const BusinessCard = ({ business, className = "" }) => {
     reviews_count,
     is_premium,
     is_verified,
-    categories = [],
-    opening_hours
+    categories = []
   } = business;
 
-  const rating = formatUtils.rating(average_rating);
-  const fullAddress = formatUtils.address(business);
-  const truncatedDescription = formatUtils.truncate(description, 120);
+  const handleClick = () => {
+    if (onBusinessClick) {
+      onBusinessClick(business);
+    }
+  };
 
   return (
-    <div className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-primary-200 ${className}`}>
+    <div className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-blue-200 ${className}`}>
       <div className="p-6">
         {/* En-tête avec logo et badges */}
         <div className="flex items-start justify-between mb-4">
@@ -37,11 +36,11 @@ const BusinessCard = ({ business, className = "" }) => {
               <img
                 src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${logo}`}
                 alt={`Logo de ${name}`}
-                className="w-12 h-12 rounded-lg object-cover"
+                className="object-cover w-12 h-12 rounded-lg"
               />
             ) : (
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-200 rounded-lg flex items-center justify-center">
-                <span className="text-primary-600 font-semibold text-lg">
+              <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200">
+                <span className="text-lg font-semibold text-blue-600">
                   {name.charAt(0).toUpperCase()}
                 </span>
               </div>
@@ -50,15 +49,17 @@ const BusinessCard = ({ business, className = "" }) => {
               <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
                 {name}
               </h3>
-              <div className="flex items-center space-x-2 mt-1">
+              <div className="flex items-center mt-1 space-x-2">
                 {is_verified && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-accent-100 text-accent-800">
-                    ✓ Vérifié
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Vérifié
                   </span>
                 )}
                 {is_premium && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary-100 text-secondary-800">
-                    ⭐ Premium
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
+                    <Crown className="w-3 h-3 mr-1" />
+                    Premium
                   </span>
                 )}
               </div>
@@ -67,8 +68,8 @@ const BusinessCard = ({ business, className = "" }) => {
         </div>
 
         {/* Description */}
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-          {truncatedDescription}
+        <p className="mb-4 text-sm text-gray-600 line-clamp-2">
+          {description?.length > 120 ? `${description.substring(0, 120)}...` : description}
         </p>
 
         {/* Catégories */}
@@ -78,13 +79,13 @@ const BusinessCard = ({ business, className = "" }) => {
               {categories.slice(0, 3).map((category) => (
                 <span
                   key={category.id}
-                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-50 text-primary-700"
+                  className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 rounded-md bg-blue-50"
                 >
                   {category.name}
                 </span>
               ))}
               {categories.length > 3 && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-600">
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md">
                   +{categories.length - 3}
                 </span>
               )}
@@ -93,21 +94,21 @@ const BusinessCard = ({ business, className = "" }) => {
         )}
 
         {/* Informations de contact */}
-        <div className="space-y-2 mb-4">
+        <div className="mb-4 space-y-2">
           <div className="flex items-center text-sm text-gray-600">
-            <MapPin className="h-4 w-4 mr-2 text-primary-500" />
-            <span className="line-clamp-1">{fullAddress}</span>
+            <MapPin className="w-4 h-4 mr-2 text-blue-500" />
+            <span className="line-clamp-1">{address}, {city}, {province}</span>
           </div>
           {phone && (
             <div className="flex items-center text-sm text-gray-600">
-              <Phone className="h-4 w-4 mr-2 text-primary-500" />
-              <span>{formatUtils.phone(phone)}</span>
+              <Phone className="w-4 h-4 mr-2 text-blue-500" />
+              <span>{phone}</span>
             </div>
           )}
         </div>
 
         {/* Note et avis */}
-        {average_rating > 0 && (
+        {(average_rating || 0) > 0 && (
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-1">
               <div className="flex items-center">
@@ -115,19 +116,19 @@ const BusinessCard = ({ business, className = "" }) => {
                   <Star
                     key={i}
                     className={`h-4 w-4 ${
-                      i < Math.floor(average_rating)
-                        ? 'text-secondary-500 fill-current'
+                      i < Math.floor(average_rating || 0)
+                        ? 'text-yellow-400 fill-current'
                         : 'text-gray-300'
                     }`}
                   />
                 ))}
               </div>
-              <span className="text-sm font-medium text-gray-900 ml-1">
-                {rating}
+              <span className="ml-1 text-sm font-medium text-gray-900">
+                {(average_rating || 0).toFixed(1)}
               </span>
             </div>
             <span className="text-sm text-gray-500">
-              {reviews_count} avis
+              {reviews_count || 0} avis
             </span>
           </div>
         )}
@@ -135,8 +136,9 @@ const BusinessCard = ({ business, className = "" }) => {
         {/* Actions */}
         <div className="flex items-center justify-between">
           <Link
-            to={`/business/${slug || id}`}
-            className="inline-flex items-center px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+            to={`/business/${id}`}
+            onClick={handleClick}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-500 rounded-lg hover:bg-blue-600"
           >
             Voir les détails
           </Link>
@@ -145,9 +147,9 @@ const BusinessCard = ({ business, className = "" }) => {
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-3 py-2 text-primary-600 hover:text-primary-700 text-sm font-medium transition-colors"
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
             >
-              <ExternalLink className="h-4 w-4 mr-1" />
+              <ExternalLink className="h-4 mr-1" />
               Site web
             </a>
           )}

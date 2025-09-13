@@ -66,9 +66,9 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="w-12 h-12 mx-auto mb-4 border-b-2 border-blue-600 rounded-full animate-spin"></div>
           <p className="text-gray-600">Chargement du tableau de bord...</p>
         </div>
       </div>
@@ -77,13 +77,13 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {/* En-tête */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Tableau de bord
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="mt-2 text-gray-600">
             Bienvenue, {user?.name} ! Gérez vos entreprises et suivez vos performances.
           </p>
         </div>
@@ -91,10 +91,10 @@ const Dashboard = () => {
         {user?.role === 'business' ? (
           <>
             {/* Statistiques */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-lg shadow p-6">
+            <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-4">
+              <div className="p-6 bg-white rounded-lg shadow">
                 <div className="flex items-center">
-                  <Building2 className="h-8 w-8 text-blue-600" />
+                  <Building2 className="w-8 h-8 text-blue-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Entreprises</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.totalBusinesses}</p>
@@ -102,21 +102,21 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="p-6 bg-white rounded-lg shadow">
                 <div className="flex items-center">
-                  <Star className="h-8 w-8 text-yellow-600" />
+                  <Star className="w-8 h-8 text-yellow-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Note moyenne</p>
                     <p className="text-2xl font-semibold text-gray-900">
-                      {stats.averageRating.toFixed(1)}
+                      {(stats.averageRating || 0).toFixed(1)}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="p-6 bg-white rounded-lg shadow">
                 <div className="flex items-center">
-                  <MessageCircle className="h-8 w-8 text-green-600" />
+                  <MessageCircle className="w-8 h-8 text-green-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Avis reçus</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.totalReviews}</p>
@@ -124,9 +124,9 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="p-6 bg-white rounded-lg shadow">
                 <div className="flex items-center">
-                  <TrendingUp className="h-8 w-8 text-purple-600" />
+                  <TrendingUp className="w-8 h-8 text-purple-600" />
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">Vues totales</p>
                     <p className="text-2xl font-semibold text-gray-900">{stats.totalViews}</p>
@@ -136,40 +136,40 @@ const Dashboard = () => {
             </div>
 
             {/* Actions rapides */}
-            <div className="bg-white rounded-lg shadow p-6 mb-8">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h2>
+            <div className="p-6 mb-8 bg-white rounded-lg shadow">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">Actions rapides</h2>
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/my-businesses"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="inline-flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                 >
-                  <Building2 className="h-4 w-4 mr-2" />
+                  <Building2 className="w-4 h-4 mr-2" />
                   Gérer mes entreprises
                 </Link>
                 <Link
                   to="/business/new"
-                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="inline-flex items-center px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="w-4 h-4 mr-2" />
                   Ajouter une entreprise
                 </Link>
                 <Link
                   to="/premium"
-                  className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+                  className="inline-flex items-center px-4 py-2 text-white bg-yellow-600 rounded-lg hover:bg-yellow-700"
                 >
-                  <Star className="h-4 w-4 mr-2" />
+                  <Star className="w-4 h-4 mr-2" />
                   Passer en Premium
                 </Link>
               </div>
             </div>
 
             {/* Mes entreprises récentes */}
-            <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="p-6 mb-8 bg-white rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Mes entreprises</h2>
                 <Link
                   to="/my-businesses"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
                 >
                   Voir toutes
                 </Link>
@@ -184,11 +184,11 @@ const Dashboard = () => {
                           <img
                             src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
                             alt={business.name}
-                            className="w-12 h-12 rounded-lg object-cover"
+                            className="object-cover w-12 h-12 rounded-lg"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <span className="text-gray-500 font-semibold">
+                          <div className="flex items-center justify-center w-12 h-12 bg-gray-200 rounded-lg">
+                            <span className="font-semibold text-gray-500">
                               {business.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -197,7 +197,7 @@ const Dashboard = () => {
                         <div>
                           <h3 className="font-medium text-gray-900">{business.name}</h3>
                           <p className="text-sm text-gray-600">{business.city}, {business.province}</p>
-                          <div className="flex items-center space-x-2 mt-1">
+                          <div className="flex items-center mt-1 space-x-2">
                             <div className="flex items-center">
                               {[...Array(5)].map((_, i) => (
                                 <Star
@@ -211,7 +211,7 @@ const Dashboard = () => {
                               ))}
                             </div>
                             <span className="text-xs text-gray-500">
-                              {business.average_rating.toFixed(1)} ({business.reviews_count} avis)
+                              {(business.average_rating || 0).toFixed(1)} ({business.reviews_count || 0} avis)
                             </span>
                           </div>
                         </div>
@@ -222,30 +222,30 @@ const Dashboard = () => {
                           to={`/business/${business.id}`}
                           className="p-2 text-gray-400 hover:text-gray-600"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="w-4 h-4" />
                         </Link>
                         <Link
                           to={`/business/${business.id}/edit`}
                           className="p-2 text-gray-400 hover:text-gray-600"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="w-4 h-4" />
                         </Link>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune entreprise</h3>
-                  <p className="text-gray-600 mb-4">
+                <div className="py-8 text-center">
+                  <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="mb-2 text-lg font-medium text-gray-900">Aucune entreprise</h3>
+                  <p className="mb-4 text-gray-600">
                     Commencez par ajouter votre première entreprise
                   </p>
                   <Link
                     to="/business/new"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="w-4 h-4 mr-2" />
                     Ajouter une entreprise
                   </Link>
                 </div>
@@ -253,12 +253,12 @@ const Dashboard = () => {
             </div>
 
             {/* Avis récents */}
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="p-6 bg-white rounded-lg shadow">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Avis récents</h2>
                 <Link
                   to="/my-reviews"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
                 >
                   Voir tous
                 </Link>
@@ -291,15 +291,15 @@ const Dashboard = () => {
                         </span>
                       </div>
                       {review.comment && (
-                        <p className="text-gray-700 text-sm">{review.comment}</p>
+                        <p className="text-sm text-gray-700">{review.comment}</p>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun avis</h3>
+                <div className="py-8 text-center">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="mb-2 text-lg font-medium text-gray-900">Aucun avis</h3>
                   <p className="text-gray-600">
                     Vous n'avez pas encore reçu d'avis
                   </p>
@@ -309,21 +309,21 @@ const Dashboard = () => {
           </>
         ) : (
           /* Dashboard utilisateur standard */
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="p-6 bg-white rounded-lg shadow">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">
               Bienvenue sur PagesJaunes.cd
             </h2>
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-gray-600">
               Découvrez les meilleures entreprises de la République Démocratique du Congo.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <Link
                 to="/search"
-                className="p-6 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-shadow"
+                className="p-6 transition-shadow border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md"
               >
-                <Building2 className="h-8 w-8 text-blue-600 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <Building2 className="w-8 h-8 mb-4 text-blue-600" />
+                <h3 className="mb-2 text-lg font-medium text-gray-900">
                   Rechercher des entreprises
                 </h3>
                 <p className="text-gray-600">
@@ -333,10 +333,10 @@ const Dashboard = () => {
               
               <Link
                 to="/categories"
-                className="p-6 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-shadow"
+                className="p-6 transition-shadow border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md"
               >
-                <MapPin className="h-8 w-8 text-green-600 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <MapPin className="w-8 h-8 mb-4 text-green-600" />
+                <h3 className="mb-2 text-lg font-medium text-gray-900">
                   Explorer par catégorie
                 </h3>
                 <p className="text-gray-600">
