@@ -27,11 +27,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Ne pas nettoyer automatiquement le localStorage
+    // Laisser le composant gérer la déconnexion
     if (error.response?.status === 401) {
-      // Token expiré ou invalide
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      console.log('Erreur 401 détectée, mais on ne nettoie pas automatiquement le localStorage')
     }
     return Promise.reject(error);
   }

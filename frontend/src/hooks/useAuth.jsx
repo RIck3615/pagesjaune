@@ -17,18 +17,25 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const initAuth = async () => {
+    const initAuth = () => {
       const token = localStorage.getItem('auth_token')
       const userData = localStorage.getItem('auth_user')
       
+      console.log('Initialisation auth:', { token: !!token, userData: !!userData })
+      
       if (token && userData) {
         try {
-          const response = await authService.me()
-          setUser(response.data.user)
-        } catch (error) {
+          const parsedUser = JSON.parse(userData)
+          console.log('Utilisateur chargé depuis localStorage:', parsedUser)
+          setUser(parsedUser)
+        } catch (parseError) {
+          console.error('Erreur parsing user data:', parseError)
           localStorage.removeItem('auth_token')
           localStorage.removeItem('auth_user')
+          setUser(null)
         }
+      } else {
+        setUser(null)
       }
       setLoading(false)
     }
@@ -39,7 +46,20 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authService.login(credentials)
-      const { user: userData, token } = response.data
+      
+      // Gérer différentes structures de réponse
+      let userData, token
+      if (response.data.data) {
+        // Structure: { success: true, data: { user, token } }
+        userData = response.data.data.user
+        token = response.data.data.token
+      } else if (response.data.user) {
+        // Structure: { user, token }
+        userData = response.data.user
+        token = response.data.token
+      } else {
+        throw new Error('Format de réponse inattendu')
+      }
       
       localStorage.setItem('auth_token', token)
       localStorage.setItem('auth_user', JSON.stringify(userData))
@@ -48,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       toast.success('Connexion réussie !')
       return { success: true }
     } catch (error) {
-      const message = error.response?.data?.message || 'Erreur de connexion'
+      const message = error.response?.data?.message || error.message || 'Erreur de connexion'
       toast.error(message)
       return { success: false, error: message }
     }
@@ -57,7 +77,18 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authService.register(userData)
-      const { user: newUser, token } = response.data
+      
+      // Gérer différentes structures de réponse
+      let newUser, token
+      if (response.data.data) {
+        newUser = response.data.data.user
+        token = response.data.data.token
+      } else if (response.data.user) {
+        newUser = response.data.user
+        token = response.data.token
+      } else {
+        throw new Error('Format de réponse inattendu')
+      }
       
       localStorage.setItem('auth_token', token)
       localStorage.setItem('auth_user', JSON.stringify(newUser))
@@ -66,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       toast.success('Inscription réussie !')
       return { success: true }
     } catch (error) {
-      const message = error.response?.data?.message || 'Erreur d\'inscription'
+      const message = error.response?.data?.message || error.message || 'Erreur d\'inscription'
       toast.error(message)
       return { success: false, error: message }
     }

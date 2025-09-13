@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Building2 } from 'lucide-react';
-import { authService } from '../services/api';
-import { authUtils } from '../utils/auth';
+import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -27,44 +27,35 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await authService.login(formData);
+      const result = await login(formData);
       
-      if (response.data.success) {
-        const { user, token } = response.data.data;
-        authUtils.setAuth(token, user);
-        
-        // Rediriger selon le rôle
-        if (user.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else if (user.role === 'business') {
-          navigate('/my-businesses');
-        } else {
-          navigate('/');
-        }
+      if (result.success) {
+        // La redirection sera gérée par le PublicRoute
+        // qui détectera que l'utilisateur est maintenant connecté
+        navigate('/');
+      } else {
+        setError(result.error || 'Erreur lors de la connexion');
       }
     } catch (error) {
       console.error('Erreur de connexion:', error);
-      setError(
-        error.response?.data?.message || 
-        'Erreur lors de la connexion. Vérifiez vos identifiants.'
-      );
+      setError('Erreur lors de la connexion. Vérifiez vos identifiants.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="flex flex-col justify-center min-h-screen py-12 bg-gray-50 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="w-16 h-16 bg-brand-gradient rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">PJ</span>
+          <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-brand-gradient">
+            <span className="text-2xl font-bold text-white">PJ</span>
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+        <h2 className="mt-6 text-3xl font-bold text-center text-gray-900">
           Connexion à votre compte
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-sm text-center text-gray-600">
           Ou{' '}
           <Link
             to="/register"
@@ -76,10 +67,10 @@ const Login = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-lg sm:rounded-lg sm:px-10 border border-gray-200">
+        <div className="px-4 py-8 bg-white border border-gray-200 shadow-lg sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-accent-50 border border-accent-200 text-accent-800 px-4 py-3 rounded-lg">
+              <div className="px-4 py-3 border rounded-lg bg-accent-50 border-accent-200 text-accent-800">
                 {error}
               </div>
             )}
@@ -88,7 +79,7 @@ const Login = () => {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Adresse e-mail
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="email"
                   name="email"
@@ -97,7 +88,7 @@ const Login = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="votre@email.com"
                 />
                 <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -108,7 +99,7 @@ const Login = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Mot de passe
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="password"
                   name="password"
@@ -117,19 +108,19 @@ const Login = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   placeholder="Votre mot de passe"
                 />
                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="w-5 h-5 text-gray-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="w-5 h-5 text-gray-400" />
                   )}
                 </button>
               </div>
@@ -141,9 +132,9 @@ const Login = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  className="w-4 h-4 border-gray-300 rounded text-primary-600 focus:ring-primary-500"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                <label htmlFor="remember-me" className="block ml-2 text-sm text-gray-900">
                   Se souvenir de moi
                 </label>
               </div>
@@ -159,11 +150,11 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg group bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="w-4 h-4 mr-2 border-b-2 border-white rounded-full animate-spin"></div>
                     Connexion...
                   </div>
                 ) : (
@@ -179,13 +170,13 @@ const Login = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Comptes de test</span>
+                <span className="px-2 text-gray-500 bg-white">Comptes de test</span>
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Comptes de test disponibles :</h4>
+            <div className="grid grid-cols-1 gap-3 mt-6">
+              <div className="p-4 rounded-lg bg-gray-50">
+                <h4 className="mb-2 text-sm font-medium text-gray-900">Comptes de test disponibles :</h4>
                 <div className="space-y-1 text-xs text-gray-600">
                   <div><strong>Admin:</strong> admin@pagesjaunes.cd / password</div>
                   <div><strong>Business:</strong> business@pagesjaunes.cd / password</div>

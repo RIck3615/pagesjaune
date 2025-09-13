@@ -12,20 +12,28 @@ export const authUtils = {
 
   // Obtenir les informations de l'utilisateur
   getUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    const user = localStorage.getItem('auth_user');
+    if (!user || user === 'undefined' || user === 'null') {
+      return null;
+    }
+    try {
+      return JSON.parse(user);
+    } catch (error) {
+      console.error('Erreur lors du parsing des données utilisateur:', error);
+      return null;
+    }
   },
 
   // Sauvegarder les informations d'authentification
   setAuth: (token, user) => {
     localStorage.setItem('auth_token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('auth_user', JSON.stringify(user));
   },
 
   // Supprimer les informations d'authentification
   clearAuth: () => {
     localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('auth_user');
   },
 
   // Vérifier si l'utilisateur est admin
