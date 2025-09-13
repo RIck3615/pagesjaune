@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, User, LogOut, Building2, Settings } from 'lucide-react';
+import { Search, Menu, X, User, LogOut, Building2, Settings, Shield } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/api';
 
@@ -9,7 +9,7 @@ const Header = ({ onSearch }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isBusiness, logout } = useAuth();
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -26,6 +26,27 @@ const Header = ({ onSearch }) => {
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }
+  };
+
+  // Fonction pour obtenir le bon lien de dashboard selon le rôle
+  const getDashboardLink = () => {
+    if (isAdmin) return '/admin/dashboard';
+    if (isBusiness) return '/my-businesses';
+    return '/dashboard';
+  };
+
+  // Fonction pour obtenir le bon texte de dashboard selon le rôle
+  const getDashboardText = () => {
+    if (isAdmin) return 'Admin Dashboard';
+    if (isBusiness) return 'Mes entreprises';
+    return 'Tableau de bord';
+  };
+
+  // Fonction pour obtenir la bonne icône de dashboard selon le rôle
+  const getDashboardIcon = () => {
+    if (isAdmin) return <Shield className="w-4 h-4 mr-2" />;
+    if (isBusiness) return <Building2 className="w-4 h-4 mr-2" />;
+    return <Settings className="w-4 h-4 mr-2" />;
   };
 
   return (
@@ -64,26 +85,34 @@ const Header = ({ onSearch }) => {
                 >
                   <User className="w-5 h-5" />
                   <span>{user?.name}</span>
+                  {isAdmin && (
+                    <span className="px-2 py-1 text-xs font-semibold text-white bg-red-600 rounded-full">
+                      Admin
+                    </span>
+                  )}
                 </button>
 
                 {isUserMenuOpen && (
                   <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-md shadow-lg">
                     <Link
-                      to="/dashboard"
+                      to={getDashboardLink()}
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      <Settings className="w-4 h-4 mr-2" />
-                      Tableau de bord
+                      {getDashboardIcon()}
+                      {getDashboardText()}
                     </Link>
-                    {user?.role === 'business' && (
+                    
+                    {/* Lien spécifique pour les admins vers la gestion des entreprises */}
+                    {isAdmin && (
                       <Link
-                        to="/my-businesses"
+                        to="/admin/businesses"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <Building2 className="w-4 h-4 mr-2" />
-                        Mes entreprises
+                        Gérer les entreprises
                       </Link>
                     )}
+                    
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -146,23 +175,33 @@ const Header = ({ onSearch }) => {
               <div className="space-y-2">
                 <div className="px-4 py-2 text-sm text-gray-500">
                   Connecté en tant que {user?.name}
+                  {isAdmin && (
+                    <span className="px-2 py-1 ml-2 text-xs font-semibold text-white bg-red-600 rounded-full">
+                      Admin
+                    </span>
+                  )}
                 </div>
                 <Link
-                  to="/dashboard"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  to={getDashboardLink()}
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  Tableau de bord
+                  {getDashboardIcon()}
+                  {getDashboardText()}
                 </Link>
-                {user?.role === 'business' && (
+                
+                {/* Lien spécifique pour les admins vers la gestion des entreprises */}
+                {isAdmin && (
                   <Link
-                    to="/my-businesses"
-                    className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    to="/admin/businesses"
+                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Mes entreprises
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Gérer les entreprises
                   </Link>
                 )}
+                
                 <button
                   onClick={() => {
                     handleLogout();

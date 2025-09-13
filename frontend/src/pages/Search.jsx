@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import { businessService, categoryService } from '../services/api';
 import SearchBar from '../components/Search/SearchBar';
 import BusinessList from '../components/Business/BusinessList';
-import { Filter, MapPin, Star, Clock } from 'lucide-react';
+import { Filter, MapPin, Star, Clock, Grid, List } from 'lucide-react';
 
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -13,26 +13,40 @@ const Search = () => {
     location: searchParams.get('location') || '',
     rating: searchParams.get('rating') || '',
     premium: searchParams.get('premium') === 'true',
-    verified: searchParams.get('verified') === 'true'
+    verified: searchParams.get('verified') === 'true' ? true : undefined
   });
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
 
   const query = searchParams.get('q') || '';
 
   // Fetch businesses based on search parameters
-  const { data: businesses, isLoading, error } = useQuery(
+  const { data: businesses, isLoading, error, refetch } = useQuery(
     ['businesses', 'search', query, filters],
-    () => businessService.getAll({
-      search: query,
-      category: filters.category,
-      city: filters.location,
-      rating: filters.rating,
-      premium: filters.premium,
-      verified: filters.verified,
-      per_page: 20
-    }),
+    async () => {
+      const params = {
+        search: query,
+        category: filters.category,
+        city: filters.location,
+        rating: filters.rating,
+        per_page: 20
+      };
+      
+      // Ne pas envoyer verified si c'est undefined
+      if (filters.verified !== undefined) {
+        params.verified = filters.verified;
+      }
+      
+      // Ne pas envoyer premium si c'est false
+      if (filters.premium) {
+        params.premium = filters.premium;
+      }
+      
+      return businessService.getAll(params);
+    },
     {
       select: (response) => response.data.data.data,
-      enabled: !!query || !!filters.category || !!filters.location
+      enabled: true,
+      retry: 1
     }
   );
 
@@ -44,6 +58,11 @@ const Search = () => {
       select: (response) => response.data.data
     }
   );
+
+  // Force refetch when component mounts
+  useEffect(() => {
+    refetch();
+  }, []);
 
   const handleSearch = (searchQuery, searchFilters = {}) => {
     const newParams = new URLSearchParams();
@@ -76,7 +95,7 @@ const Search = () => {
       location: '',
       rating: '',
       premium: false,
-      verified: false
+      verified: undefined
     });
     setSearchParams({ q: query });
   };
@@ -225,6 +244,12 @@ const Search = () => {
                 <p className="text-gray-600">
                   Impossible de charger les résultats. Veuillez réessayer.
                 </p>
+                <button
+                  onClick={() => refetch()}
+                  className="px-4 py-2 mt-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Réessayer
+                </button>
               </div>
             ) : businesses?.length === 0 ? (
               <div className="py-12 text-center">
@@ -247,11 +272,41 @@ const Search = () => {
                   <p className="text-gray-600">
                     {businesses?.length} entreprise{businesses?.length !== 1 ? 's' : ''} trouvée{businesses?.length !== 1 ? 's' : ''}
                   </p>
+                  
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500">Affichage:</span>
+                    <div className="flex border border-gray-300 rounded-lg">
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-2 ${viewMode === 'grid' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-white text-gray-600 hover:bg-gray-50'
+                        } rounded-l-lg transition-colors`}
+                        title="Vue en grille"
+                      >
+                        <Grid className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-2 ${viewMode === 'list' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-white text-gray-600 hover:bg-gray-50'
+                        } rounded-r-lg transition-colors`}
+                        title="Vue en liste"
+                      >
+                        <List className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 
                 <BusinessList
                   businesses={businesses || []}
-                  className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+                  className={viewMode === 'grid' 
+                    ? "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3" 
+                    : "space-y-4"
+                  }
                 />
               </div>
             )}

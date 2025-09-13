@@ -62,25 +62,28 @@ const Home = () => {
     try {
       setLoading(true);
       
-      console.log('Chargement des données initiales...');
-      
       // Charger les entreprises en vedette (toutes les entreprises vérifiées)
       const businessesResponse = await businessService.getAll({
         verified: true,
         per_page: 6
       });
       
-      console.log('Réponse entreprises:', businessesResponse.data);
-      setFeaturedBusinesses(businessesResponse.data.data.data);
+      const businesses = businessesResponse.data.data.data;
+      setFeaturedBusinesses(businesses);
 
       // Charger les catégories principales
       const categoriesResponse = await categoryService.getAll({ root_only: true });
-      console.log('Réponse catégories:', categoriesResponse.data);
-      setCategories(categoriesResponse.data.data.slice(0, 8));
+      
+      const categories = categoriesResponse.data.data.slice(0, 8);
+      setCategories(categories);
 
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-      console.error('Détails de l\'erreur:', error.response?.data);
+      console.error('=== ERREUR LORS DU CHARGEMENT ===');
+      console.error('Erreur complète:', error);
+      console.error('Message d\'erreur:', error.message);
+      console.error('Réponse d\'erreur:', error.response);
+      console.error('Données d\'erreur:', error.response?.data);
+      console.error('Status d\'erreur:', error.response?.status);
     } finally {
       setLoading(false);
     }
@@ -351,26 +354,34 @@ const Home = () => {
       </section>
 
       {/* Entreprises en vedette */}
-      {featuredBusinesses.length > 0 && (
-        <section className="py-8 bg-gray-50">
-          <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-            <h2 className="mb-6 text-2xl font-bold text-gray-900">Découvrez les entreprises locales</h2>
-            
-            {loading ? (
-              <div className="py-12 text-center">
-                <div className="inline-block w-8 h-8 border-b-2 border-yellow-500 rounded-full animate-spin"></div>
-                <p className="mt-4 text-gray-600">Chargement...</p>
-              </div>
-            ) : (
-              <BusinessList
-                businesses={featuredBusinesses}
-                className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-                onBusinessClick={handleBusinessClick}
-              />
-            )}
-          </div>
-        </section>
-      )}
+      <section className="py-8 bg-gray-50">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <h2 className="mb-6 text-2xl font-bold text-gray-900">Découvrez les entreprises locales</h2>
+          
+          {loading ? (
+            <div className="py-12 text-center">
+              <div className="inline-block w-8 h-8 border-b-2 border-yellow-500 rounded-full animate-spin"></div>
+              <p className="mt-4 text-gray-600">Chargement...</p>
+            </div>
+          ) : featuredBusinesses.length > 0 ? (
+            <BusinessList
+              businesses={featuredBusinesses}
+              className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+              onBusinessClick={handleBusinessClick}
+            />
+          ) : (
+            <div className="py-12 text-center">
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">Aucune entreprise trouvée</h3>
+              <p className="mb-4 text-gray-600">
+                Il n'y a pas encore d'entreprises vérifiées dans notre base de données.
+              </p>
+              <p className="text-sm text-gray-500">
+                Vérifiez que vos entreprises sont marquées comme vérifiées dans la base de données.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Résultats de recherche */}
       {isSearching && searchResults.length > 0 && (

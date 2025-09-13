@@ -25,6 +25,7 @@ import MyBusinesses from './pages/MyBusinesses';
 import CreateBusiness from './pages/CreateBusiness';
 import EditBusiness from './pages/EditBusiness';
 import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminBusinesses from './pages/Admin/AdminBusinesses';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -89,6 +90,11 @@ function App() {
                 <Route path="/admin/dashboard" element={
                   <ProtectedRoute requireAdmin={true}>
                     <AdminDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/businesses" element={
+                  <ProtectedRoute requireAdmin={true}>
+                    <AdminBusinesses />
                   </ProtectedRoute>
                 } />
                 

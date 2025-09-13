@@ -3,235 +3,317 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Business;
-use App\Models\Review;
 use App\Models\Category;
+use App\Models\Review;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AdminController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:sanctum');
-        $this->middleware(function ($request, $next) {
-            if (!$request->user()->isAdmin()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unauthorized'
-                ], 403);
+        // Middleware supprimé pour éviter l'erreur de redirection
+    }
+
+    private function checkAuth(Request $request): ?User
+    {
+        $token = $request->bearerToken();
+        if (!$token) {
+            return null;
+        }
+
+        // Utiliser Sanctum pour vérifier le token
+        $personalAccessToken = PersonalAccessToken::findToken($token);
+        if (!$personalAccessToken) {
+            return null;
+        }
+
+        $user = $personalAccessToken->tokenable;
+        if (!$user || !$user->isAdmin()) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    public function getDashboard(Request $request): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        try {
+            $stats = [
+                'total_businesses' => Business::count(),
+                'active_businesses' => Business::where('is_active', true)->count(),
+                'pending_businesses' => Business::where('is_active', false)->count(),
+                'premium_businesses' => Business::where('is_premium', true)->count(),
+                'verified_businesses' => Business::where('is_verified', true)->count(),
+                'total_categories' => Category::count(),
+                'total_reviews' => Review::count(),
+                'total_users' => User::count(),
+            ];
+
+            $recent_businesses = Business::with(['categories', 'user'])
+                ->latest()
+                ->limit(5)
+                ->get();
+
+            $businesses_by_status = Business::select('is_active', DB::raw('count(*) as count'))
+                ->groupBy('is_active')
+                ->get();
+
+            $businesses_by_premium = Business::select('is_premium', DB::raw('count(*) as count'))
+                ->groupBy('is_premium')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'stats' => $stats,
+                    'recent_businesses' => $recent_businesses,
+                    'businesses_by_status' => $businesses_by_status,
+                    'businesses_by_premium' => $businesses_by_premium,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement du tableau de bord',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getBusinesses(Request $request): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        try {
+            $perPage = $request->get('per_page', 10);
+            $search = $request->get('search', '');
+            $status = $request->get('status', 'all');
+            $category = $request->get('category', '');
+            $sortBy = $request->get('sort_by', 'created_at');
+            $sortOrder = $request->get('sort_order', 'desc');
+
+            $query = Business::with(['categories', 'user']);
+
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%")
+                      ->orWhere('city', 'like', "%{$search}%");
+                });
             }
-            return $next($request);
-        });
-    }
 
-    public function dashboard(): JsonResponse
-    {
-        $stats = [
-            'total_users' => User::count(),
-            'total_businesses' => Business::count(),
-            'active_businesses' => Business::active()->count(),
-            'premium_businesses' => Business::premium()->count(),
-            'total_reviews' => Review::count(),
-            'pending_reviews' => Review::pending()->count(),
-            'approved_reviews' => Review::approved()->count(),
-            'total_categories' => Category::count(),
-        ];
-
-        $recent_businesses = Business::with(['user', 'categories'])
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-
-        $recent_reviews = Review::with(['business', 'user'])
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'stats' => $stats,
-                'recent_businesses' => $recent_businesses,
-                'recent_reviews' => $recent_reviews,
-            ]
-        ]);
-    }
-
-    public function users(Request $request): JsonResponse
-    {
-        $query = User::withCount(['businesses', 'reviews']);
-
-        // Search users
-        if ($request->has('search') && $request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%")
-                  ->orWhere('email', 'like', "%{$request->search}%");
-            });
-        }
-
-        // Filter by role
-        if ($request->has('role') && $request->role) {
-            $query->where('role', $request->role);
-        }
-
-        $users = $query->orderBy('created_at', 'desc')
-                      ->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $users
-        ]);
-    }
-
-    public function updateUser(Request $request, User $user): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|email|max:255|unique:users,email,' . $user->id,
-            'role' => 'sometimes|required|in:user,business,admin',
-            'phone' => 'nullable|string|max:20',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $user->update($request->all());
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-            'data' => $user
-        ]);
-    }
-
-    public function deleteUser(User $user): JsonResponse
-    {
-        // Prevent admin from deleting themselves
-        if ($user->id === auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot delete your own account'
-            ], 422);
-        }
-
-        $user->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User deleted successfully'
-        ]);
-    }
-
-    public function businesses(Request $request): JsonResponse
-    {
-        $query = Business::with(['user', 'categories']);
-
-        // Search businesses
-        if ($request->has('search') && $request->search) {
-            $query->search($request->search);
-        }
-
-        // Filter by status
-        if ($request->has('status')) {
-            switch ($request->status) {
-                case 'active':
-                    $query->active();
-                    break;
-                case 'inactive':
+            if ($status !== 'all') {
+                if ($status === 'active') {
+                    $query->where('is_active', true);
+                } elseif ($status === 'inactive') {
                     $query->where('is_active', false);
-                    break;
-                case 'verified':
-                    $query->verified();
-                    break;
-                case 'premium':
-                    $query->premium();
-                    break;
+                } elseif ($status === 'premium') {
+                    $query->where('is_premium', true);
+                } elseif ($status === 'verified') {
+                    $query->where('is_verified', true);
+                }
             }
-        }
 
-        $businesses = $query->orderBy('created_at', 'desc')
-                           ->paginate(15);
+            if ($category) {
+                $query->whereHas('categories', function ($q) use ($category) {
+                    $q->where('id', $category);
+                });
+            }
 
-        return response()->json([
-            'success' => true,
-            'data' => $businesses
-        ]);
-    }
+            $query->orderBy($sortBy, $sortOrder);
 
-    public function updateBusiness(Request $request, Business $business): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'is_verified' => 'sometimes|boolean',
-            'is_active' => 'sometimes|boolean',
-            'is_premium' => 'sometimes|boolean',
-        ]);
+            $businesses = $query->paginate($perPage);
 
-        if ($validator->fails()) {
+            return response()->json([
+                'success' => true,
+                'data' => $businesses
+            ]);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Erreur lors du chargement des entreprises',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $business->update($request->all());
-        $business->load(['user', 'categories']);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Business updated successfully',
-            'data' => $business
-        ]);
     }
 
-    public function reviews(Request $request): JsonResponse
+    public function getBusiness(Request $request, $id): JsonResponse
     {
-        $query = Review::with(['business', 'user']);
-
-        // Filter by status
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
         }
 
-        $reviews = $query->orderBy('created_at', 'desc')
-                        ->paginate(15);
+        try {
+            $business = Business::with(['categories', 'user', 'reviews.user'])
+                ->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data' => $reviews
-        ]);
-    }
+            return response()->json([
+                'success' => true,
+                'data' => $business
+            ]);
 
-    public function moderateReview(Request $request, Review $review): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:approved,rejected',
-        ]);
-
-        if ($validator->fails()) {
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation errors',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Erreur lors du chargement de l\'entreprise',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateBusiness(Request $request, $id): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
         }
 
-        $review->update(['status' => $request->status]);
-        $review->load(['business', 'user']);
+        try {
+            $business = Business::findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Review moderated successfully',
-            'data' => $review
-        ]);
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'description' => 'sometimes|string',
+                'email' => 'sometimes|email|max:255',
+                'phone' => 'sometimes|string|max:20',
+                'website' => 'sometimes|url|max:255',
+                'address' => 'sometimes|string|max:500',
+                'city' => 'sometimes|string|max:100',
+                'province' => 'sometimes|string|max:100',
+                'latitude' => 'sometimes|numeric',
+                'longitude' => 'sometimes|numeric',
+                'is_active' => 'sometimes|boolean',
+                'is_premium' => 'sometimes|boolean',
+                'is_verified' => 'sometimes|boolean',
+                'categories' => 'sometimes|array',
+                'categories.*' => 'exists:categories,id',
+            ]);
+
+            $business->update($validated);
+
+            if (isset($validated['categories'])) {
+                $business->categories()->sync($validated['categories']);
+            }
+
+            $business->load(['categories', 'user']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Entreprise mise à jour avec succès',
+                'data' => $business
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour de l\'entreprise',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function deleteBusiness(Request $request, $id): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        try {
+            $business = Business::findOrFail($id);
+            $business->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Entreprise supprimée avec succès'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la suppression de l\'entreprise',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getCategories(Request $request): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        try {
+            $categories = Category::with('parent')
+                ->orderBy('name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $categories
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement des catégories',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getUsers(Request $request): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        try {
+            $perPage = $request->get('per_page', 10);
+            $search = $request->get('search', '');
+
+            $query = User::withCount('businesses');
+
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+
+            $users = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $users
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement des utilisateurs',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
 

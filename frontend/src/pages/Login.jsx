@@ -30,9 +30,8 @@ const Login = () => {
       const result = await login(formData);
       
       if (result.success) {
-        // La redirection sera gérée par le PublicRoute
-        // qui détectera que l'utilisateur est maintenant connecté
-        navigate('/');
+        // Ne pas naviguer manuellement, laisser PublicRoute gérer la redirection
+        // Le PublicRoute détectera automatiquement le rôle et redirigera
       } else {
         setError(result.error || 'Erreur lors de la connexion');
       }

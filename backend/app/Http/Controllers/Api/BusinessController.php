@@ -9,9 +9,25 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class BusinessController extends Controller
 {
+    private function checkAuth(Request $request): ?\App\Models\User
+    {
+        $token = $request->bearerToken();
+        if (!$token) {
+            return null;
+        }
+
+        $personalAccessToken = PersonalAccessToken::findToken($token);
+        if (!$personalAccessToken) {
+            return null;
+        }
+
+        return $personalAccessToken->tokenable;
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = Business::with(['categories', 'user']);
@@ -56,14 +72,20 @@ class BusinessController extends Controller
 
         // Filter by category name - Trouver d'abord l'ID de la catégorie
         if ($request->has('category') && $request->category) {
+            \Log::info('Recherche par catégorie:', ['category' => $request->category]);
+
             $categoryId = Category::where('name', 'like', "%{$request->category}%")->pluck('id');
+            \Log::info('IDs de catégories trouvés:', ['category_ids' => $categoryId->toArray()]);
+
             if ($categoryId->isNotEmpty()) {
                 $query->whereHas('categories', function ($q) use ($categoryId) {
                     $q->whereIn('category_id', $categoryId);
                 });
+                \Log::info('Filtre par catégorie appliqué');
             } else {
                 // Si aucune catégorie trouvée, retourner un résultat vide
                 $query->whereRaw('1 = 0');
+                \Log::info('Aucune catégorie trouvée, résultat vide');
             }
         }
 
@@ -127,6 +149,11 @@ class BusinessController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -158,7 +185,7 @@ class BusinessController extends Controller
         }
 
         $data = $request->except(['logo', 'images', 'category_ids']);
-        $data['user_id'] = auth()->id();
+        $data['user_id'] = $user->id;
         $data['is_active'] = true;
         $data['is_verified'] = false;
 
@@ -191,10 +218,15 @@ class BusinessController extends Controller
 
     public function update(Request $request, $id): JsonResponse
     {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
         $business = Business::findOrFail($id);
 
         // Check if user owns this business
-        if ($business->user_id !== auth()->id()) {
+        if ($business->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Non autorisé'
@@ -272,12 +304,17 @@ class BusinessController extends Controller
         ]);
     }
 
-    public function destroy($id): JsonResponse
+    public function destroy(Request $request, $id): JsonResponse
     {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
         $business = Business::findOrFail($id);
 
         // Check if user owns this business
-        if ($business->user_id !== auth()->id()) {
+        if ($business->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Non autorisé'
@@ -303,10 +340,15 @@ class BusinessController extends Controller
         ]);
     }
 
-    public function getMyBusinesses(): JsonResponse
+    public function getMyBusinesses(Request $request): JsonResponse
     {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
         $businesses = Business::with(['categories'])
-            ->where('user_id', auth()->id())
+            ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->get();
 

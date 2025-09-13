@@ -12,7 +12,6 @@ import {
   MoreVertical
 } from 'lucide-react';
 import { businessService } from '../services/api';
-import { authUtils } from '../utils/auth';
 import { formatUtils } from '../utils/format';
 
 const MyBusinesses = () => {
@@ -31,10 +30,11 @@ const MyBusinesses = () => {
       setError(null);
       
       const response = await businessService.getMyBusinesses();
-      setBusinesses(response.data.data.data);
+      setBusinesses(response.data.data || []);
     } catch (error) {
       console.error('Erreur lors du chargement des entreprises:', error);
       setError('Erreur lors du chargement de vos entreprises');
+      setBusinesses([]);
     } finally {
       setLoading(false);
     }
@@ -58,9 +58,9 @@ const MyBusinesses = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="w-12 h-12 mx-auto mb-4 border-b-2 border-blue-600 rounded-full animate-spin"></div>
           <p className="text-gray-600">Chargement de vos entreprises...</p>
         </div>
       </div>
@@ -69,13 +69,13 @@ const MyBusinesses = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Erreur</h1>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h1 className="mb-4 text-2xl font-bold text-gray-900">Erreur</h1>
+          <p className="mb-6 text-gray-600">{error}</p>
           <button
             onClick={loadBusinesses}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           >
             Réessayer
           </button>
@@ -86,30 +86,30 @@ const MyBusinesses = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {/* En-tête */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Mes entreprises</h1>
-            <p className="text-gray-600 mt-2">
+            <p className="mt-2 text-gray-600">
               Gérez vos fiches d'entreprise et suivez leurs performances
             </p>
           </div>
           
           <Link
             to="/business/new"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="w-4 h-4 mr-2" />
             Ajouter une entreprise
           </Link>
         </div>
 
         {/* Liste des entreprises */}
-        {businesses.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {businesses && businesses.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {businesses.map((business) => (
-              <div key={business.id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow">
+              <div key={business.id} className="transition-shadow bg-white rounded-lg shadow-md hover:shadow-lg">
                 <div className="p-6">
                   {/* En-tête de la carte */}
                   <div className="flex items-start justify-between mb-4">
@@ -118,11 +118,11 @@ const MyBusinesses = () => {
                         <img
                           src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
                           alt={business.name}
-                          className="w-12 h-12 rounded-lg object-cover"
+                          className="object-cover w-12 h-12 rounded-lg"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-500 font-semibold text-lg">
+                        <div className="flex items-center justify-center w-12 h-12 bg-gray-200 rounded-lg">
+                          <span className="text-lg font-semibold text-gray-500">
                             {business.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
@@ -132,19 +132,19 @@ const MyBusinesses = () => {
                         <h3 className="font-semibold text-gray-900 line-clamp-1">
                           {business.name}
                         </h3>
-                        <div className="flex items-center space-x-2 mt-1">
+                        <div className="flex items-center mt-1 space-x-2">
                           {business.is_verified && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
                               ✓ Vérifié
                             </span>
                           )}
                           {business.is_premium && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
                               ⭐ Premium
                             </span>
                           )}
                           {!business.is_active && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-red-800 bg-red-100 rounded-full">
                               Inactif
                             </span>
                           )}
@@ -155,20 +155,20 @@ const MyBusinesses = () => {
                     {/* Menu d'actions */}
                     <div className="relative">
                       <button className="p-1 text-gray-400 hover:text-gray-600">
-                        <MoreVertical className="h-4 w-4" />
+                        <MoreVertical className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
                   {/* Description */}
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  <p className="mb-4 text-sm text-gray-600 line-clamp-2">
                     {formatUtils.truncate(business.description, 100)}
                   </p>
 
                   {/* Informations de contact */}
-                  <div className="space-y-2 mb-4">
+                  <div className="mb-4 space-y-2">
                     <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                      <MapPin className="w-4 h-4 mr-2 text-gray-400" />
                       <span className="line-clamp-1">
                         {business.city}, {business.province}
                       </span>
@@ -176,7 +176,7 @@ const MyBusinesses = () => {
                     
                     {business.phone && (
                       <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
                         <span>{formatUtils.phone(business.phone)}</span>
                       </div>
                     )}
@@ -184,7 +184,7 @@ const MyBusinesses = () => {
 
                   {/* Note et avis */}
                   {business.reviews_count > 0 && (
-                    <div className="flex items-center space-x-2 mb-4">
+                    <div className="flex items-center mb-4 space-x-2">
                       <div className="flex items-center">
                         {[...Array(5)].map((_, i) => (
                           <Star
@@ -198,7 +198,7 @@ const MyBusinesses = () => {
                         ))}
                       </div>
                       <span className="text-sm text-gray-600">
-                        {business.average_rating.toFixed(1)} ({business.reviews_count} avis)
+                        {business.average_rating?.toFixed(1)} ({business.reviews_count} avis)
                       </span>
                     </div>
                   )}
@@ -209,13 +209,13 @@ const MyBusinesses = () => {
                       {business.categories.slice(0, 2).map((category) => (
                         <span
                           key={category.id}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-800 bg-blue-100 rounded-full"
                         >
                           {category.name}
                         </span>
                       ))}
                       {business.categories.length > 2 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
                           +{business.categories.length - 2}
                         </span>
                       )}
@@ -230,14 +230,14 @@ const MyBusinesses = () => {
                         className="p-2 text-gray-400 hover:text-blue-600"
                         title="Voir les détails"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="w-4 h-4" />
                       </Link>
                       <Link
                         to={`/business/${business.id}/edit`}
                         className="p-2 text-gray-400 hover:text-green-600"
                         title="Modifier"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="w-4 h-4" />
                       </Link>
                       <button
                         onClick={() => handleDelete(business.id)}
@@ -248,7 +248,7 @@ const MyBusinesses = () => {
                         }`}
                         title={deleteConfirm === business.id ? 'Confirmer la suppression' : 'Supprimer'}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -259,20 +259,20 @@ const MyBusinesses = () => {
 
                   {/* Confirmation de suppression */}
                   {deleteConfirm === business.id && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-sm text-red-800 mb-2">
+                    <div className="p-3 mt-4 border border-red-200 rounded-md bg-red-50">
+                      <p className="mb-2 text-sm text-red-800">
                         Êtes-vous sûr de vouloir supprimer cette entreprise ?
                       </p>
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleDelete(business.id)}
-                          className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+                          className="px-3 py-1 text-xs text-white bg-red-600 rounded hover:bg-red-700"
                         >
                           Confirmer
                         </button>
                         <button
                           onClick={() => setDeleteConfirm(null)}
-                          className="px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
+                          className="px-3 py-1 text-xs text-gray-700 bg-gray-300 rounded hover:bg-gray-400"
                         >
                           Annuler
                         </button>
@@ -285,29 +285,29 @@ const MyBusinesses = () => {
           </div>
         ) : (
           /* État vide */
-          <div className="text-center py-12">
-            <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="py-12 text-center">
+            <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <h3 className="mb-2 text-lg font-medium text-gray-900">
               Aucune entreprise
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-gray-600">
               Commencez par ajouter votre première entreprise pour augmenter votre visibilité
             </p>
             <Link
               to="/business/new"
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="inline-flex items-center px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
             >
-              <Plus className="h-5 w-5 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               Ajouter ma première entreprise
             </Link>
           </div>
         )}
 
         {/* Statistiques */}
-        {businesses.length > 0 && (
-          <div className="mt-8 bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistiques</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {businesses && businesses.length > 0 && (
+          <div className="p-6 mt-8 bg-white rounded-lg shadow">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">Statistiques</h3>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{businesses.length}</div>
                 <div className="text-sm text-gray-600">Entreprises</div>
@@ -326,7 +326,7 @@ const MyBusinesses = () => {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {businesses.reduce((acc, b) => acc + b.reviews_count, 0)}
+                  {businesses.reduce((acc, b) => acc + (b.reviews_count || 0), 0)}
                 </div>
                 <div className="text-sm text-gray-600">Avis total</div>
               </div>
@@ -339,4 +339,3 @@ const MyBusinesses = () => {
 };
 
 export default MyBusinesses;
-

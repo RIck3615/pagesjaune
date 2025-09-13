@@ -15,6 +15,9 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [isBusiness, setIsBusiness] = useState(false)
 
   useEffect(() => {
     const initAuth = () => {
@@ -28,14 +31,23 @@ export const AuthProvider = ({ children }) => {
           const parsedUser = JSON.parse(userData)
           console.log('Utilisateur chargé depuis localStorage:', parsedUser)
           setUser(parsedUser)
+          setIsAuthenticated(true)
+          setIsAdmin(parsedUser.role === 'admin')
+          setIsBusiness(parsedUser.role === 'business')
         } catch (parseError) {
           console.error('Erreur parsing user data:', parseError)
           localStorage.removeItem('auth_token')
           localStorage.removeItem('auth_user')
           setUser(null)
+          setIsAuthenticated(false)
+          setIsAdmin(false)
+          setIsBusiness(false)
         }
       } else {
         setUser(null)
+        setIsAuthenticated(false)
+        setIsAdmin(false)
+        setIsBusiness(false)
       }
       setLoading(false)
     }
@@ -63,7 +75,12 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('auth_token', token)
       localStorage.setItem('auth_user', JSON.stringify(userData))
+      
+      // Mettre à jour tous les états
       setUser(userData)
+      setIsAuthenticated(true)
+      setIsAdmin(userData.role === 'admin')
+      setIsBusiness(userData.role === 'business')
       
       toast.success('Connexion réussie !')
       return { success: true }
@@ -112,6 +129,9 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
       setUser(null)
+      setIsAuthenticated(false)
+      setIsAdmin(false)
+      setIsBusiness(false)
       toast.success('Déconnexion réussie !')
     }
   }
@@ -122,9 +142,9 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    isBusiness: user?.role === 'business',
+    isAuthenticated,
+    isAdmin,
+    isBusiness,
   }
 
   return (
