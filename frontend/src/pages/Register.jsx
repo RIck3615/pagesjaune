@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Building2 } from 'lucide-react';
-import { authService } from '../services/api';
-import { authUtils } from '../utils/auth';
+import { Eye, EyeOff, Mail, Lock, User, Building2, UserCheck } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     password_confirmation: '',
-    phone: '',
-    role: 'user',
+    role: 'user'
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -31,58 +30,45 @@ const Register = () => {
     setLoading(true);
     setError('');
 
-    // Validation côté client
     if (formData.password !== formData.password_confirmation) {
       setError('Les mots de passe ne correspondent pas');
       setLoading(false);
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
-      setLoading(false);
-      return;
-    }
-
     try {
-      const response = await authService.register(formData);
+      const result = await register(formData);
       
-      if (response.data.success) {
-        const { user, token } = response.data.data;
-        authUtils.setAuth(token, user);
-        
-        // Rediriger selon le rôle
-        if (user.role === 'business') {
-          navigate('/my-businesses');
-        } else {
-          navigate('/');
-        }
+      if (result.success) {
+        // Redirection automatique gérée par PublicRoute
+      } else {
+        setError(result.error || 'Erreur lors de l\'inscription');
       }
     } catch (error) {
       console.error('Erreur d\'inscription:', error);
-      setError(
-        error.response?.data?.message || 
-        'Erreur lors de l\'inscription. Veuillez réessayer.'
-      );
+      setError('Erreur lors de l\'inscription. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="flex flex-col justify-center min-h-screen py-12 bg-gray-50 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <Building2 className="h-12 w-12 text-blue-600" />
+          <div className="flex items-center justify-center w-16 h-16 rounded-lg" style={{ background: 'linear-gradient(135deg, #009ee5, #faed09)' }}>
+            <span className="text-2xl font-bold text-white">PJ</span>
+          </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-3xl font-bold text-center text-gray-900">
           Créer un compte
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-sm text-center text-gray-600">
           Ou{' '}
           <Link
             to="/login"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium hover:opacity-80"
+            style={{ color: '#009ee5' }}
           >
             connectez-vous à votre compte existant
           </Link>
@@ -90,11 +76,11 @@ const Register = () => {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="px-4 py-8 bg-white border border-gray-200 shadow-lg sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-                {error}
+              <div className="px-4 py-3 border rounded-lg" style={{ backgroundColor: '#df0a1e', borderColor: '#df0a1e' }}>
+                <p className="text-white">{error}</p>
               </div>
             )}
 
@@ -102,7 +88,7 @@ const Register = () => {
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                 Nom complet
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="name"
                   name="name"
@@ -111,18 +97,19 @@ const Register = () => {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
                   placeholder="Votre nom complet"
                 />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
             </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Adresse email
+                Adresse e-mail
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="email"
                   name="email"
@@ -131,29 +118,11 @@ const Register = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
                   placeholder="votre@email.com"
                 />
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Téléphone (optionnel)
-              </label>
-              <div className="mt-1 relative">
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="+243 XXX XXX XXX"
-                />
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
             </div>
 
@@ -167,25 +136,20 @@ const Register = () => {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
                 >
                   <option value="user">Utilisateur</option>
                   <option value="business">Entreprise</option>
                 </select>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                {formData.role === 'business' 
-                  ? 'Compte entreprise pour gérer vos fiches d\'entreprise'
-                  : 'Compte utilisateur pour rechercher et laisser des avis'
-                }
-              </p>
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Mot de passe
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="password"
                   name="password"
@@ -194,16 +158,21 @@ const Register = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Minimum 8 caractères"
+                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
+                  placeholder="Votre mot de passe"
                 />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 <button
                   type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-gray-400" />
+                  )}
                 </button>
               </div>
             </div>
@@ -212,7 +181,7 @@ const Register = () => {
               <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700">
                 Confirmer le mot de passe
               </label>
-              <div className="mt-1 relative">
+              <div className="relative mt-1">
                 <input
                   id="password_confirmation"
                   name="password_confirmation"
@@ -221,16 +190,21 @@ const Register = () => {
                   required
                   value={formData.password_confirmation}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Confirmez votre mot de passe"
+                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
+                  placeholder="Confirmer votre mot de passe"
                 />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 <button
                   type="button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <Eye className="w-5 h-5 text-gray-400" />
+                  )}
                 </button>
               </div>
             </div>
@@ -239,48 +213,20 @@ const Register = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg group focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                style={{ backgroundColor: '#009ee5', '--tw-ring-color': '#009ee5' }}
               >
                 {loading ? (
                   <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Création du compte...
+                    <div className="w-4 h-4 mr-2 border-b-2 border-white rounded-full animate-spin"></div>
+                    Inscription...
                   </div>
                 ) : (
-                  'Créer le compte'
+                  'Créer mon compte'
                 )}
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Informations</span>
-              </div>
-            </div>
-
-            <div className="mt-6 text-xs text-gray-500">
-              <p className="mb-2">
-                En créant un compte, vous acceptez nos{' '}
-                <Link to="/terms" className="text-blue-600 hover:text-blue-500">
-                  conditions d'utilisation
-                </Link>{' '}
-                et notre{' '}
-                <Link to="/privacy" className="text-blue-600 hover:text-blue-500">
-                  politique de confidentialité
-                </Link>
-                .
-              </p>
-              <p>
-                Les comptes entreprise permettent de gérer vos fiches d'entreprise 
-                et d'accéder à des fonctionnalités premium.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

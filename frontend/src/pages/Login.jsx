@@ -47,7 +47,7 @@ const Login = () => {
     <div className="flex flex-col justify-center min-h-screen py-12 bg-gray-50 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="flex items-center justify-center w-16 h-16 rounded-lg bg-brand-gradient">
+          <div className="flex items-center justify-center w-16 h-16 rounded-lg" style={{ background: 'linear-gradient(135deg, #009ee5, #faed09)' }}>
             <span className="text-2xl font-bold text-white">PJ</span>
           </div>
         </div>
@@ -58,7 +58,8 @@ const Login = () => {
           Ou{' '}
           <Link
             to="/register"
-            className="font-medium text-primary-600 hover:text-primary-500"
+            className="font-medium hover:opacity-80"
+            style={{ color: '#009ee5' }}
           >
             créez un nouveau compte
           </Link>
@@ -69,8 +70,8 @@ const Login = () => {
         <div className="px-4 py-8 bg-white border border-gray-200 shadow-lg sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {error && (
-              <div className="px-4 py-3 border rounded-lg bg-accent-50 border-accent-200 text-accent-800">
-                {error}
+              <div className="px-4 py-3 border rounded-lg" style={{ backgroundColor: '#df0a1e', borderColor: '#df0a1e' }}>
+                <p className="text-white">{error}</p>
               </div>
             )}
 
@@ -87,7 +88,8 @@ const Login = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
                   placeholder="votre@email.com"
                 />
                 <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -107,7 +109,8 @@ const Login = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
+                  style={{ '--tw-ring-color': '#009ee5' }}
                   placeholder="Votre mot de passe"
                 />
                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -131,7 +134,8 @@ const Login = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="w-4 h-4 border-gray-300 rounded text-primary-600 focus:ring-primary-500"
+                  className="w-4 h-4 border-gray-300 rounded focus:ring-2"
+                  style={{ '--tw-ring-color': '#009ee5' }}
                 />
                 <label htmlFor="remember-me" className="block ml-2 text-sm text-gray-900">
                   Se souvenir de moi
@@ -139,7 +143,7 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+                <a href="#" className="font-medium hover:opacity-80" style={{ color: '#009ee5' }}>
                   Mot de passe oublié ?
                 </a>
               </div>
@@ -149,7 +153,8 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg group bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg group focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                style={{ backgroundColor: '#009ee5', '--tw-ring-color': '#009ee5' }}
               >
                 {loading ? (
                   <div className="flex items-center">
@@ -162,28 +167,6 @@ const Login = () => {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 text-gray-500 bg-white">Comptes de test</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 mt-6">
-              <div className="p-4 rounded-lg bg-gray-50">
-                <h4 className="mb-2 text-sm font-medium text-gray-900">Comptes de test disponibles :</h4>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div><strong>Admin:</strong> admin@pagesjaunes.cd / password</div>
-                  <div><strong>Business:</strong> business@pagesjaunes.cd / password</div>
-                  <div><strong>User:</strong> user@pagesjaunes.cd / password</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
