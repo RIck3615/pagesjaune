@@ -16,24 +16,10 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // DEBUG: Log les données avant envoi
-    console.log('=== INTERCEPTEUR REQUEST ===');
-    console.log('URL:', config.url);
-    console.log('Method:', config.method);
-    console.log('Headers:', config.headers);
-    console.log('Data type:', typeof config.data);
-    console.log('Is FormData:', config.data instanceof FormData);
-    
+    // Gérer FormData automatiquement
     if (config.data instanceof FormData) {
-      console.log('FormData entries:');
-      for (let [key, value] of config.data.entries()) {
-        console.log(`${key}:`, value);
-      }
       config.headers['Content-Type'] = 'multipart/form-data';
-    } else {
-      console.log('Data:', config.data);
     }
-    console.log('=== FIN INTERCEPTEUR ===');
     
     return config;
   },
@@ -44,8 +30,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Ne pas nettoyer automatiquement le localStorage
-    // Laisser le composant gérer la déconnexion
     if (error.response?.status === 401) {
       console.log('Erreur 401 détectée, mais on ne nettoie pas automatiquement le localStorage')
     }
@@ -67,7 +51,7 @@ export const businessService = {
   getById: (id) => api.get(`/businesses/${id}`),
   create: (data) => api.post('/businesses', data),
   update: (id, data) => {
-    // CORRECTION: Utiliser POST avec _method=PUT pour FormData
+    // Utiliser POST avec _method=PUT pour FormData
     if (data instanceof FormData) {
       data.append('_method', 'PUT');
       return api.post(`/businesses/${id}`, data, {

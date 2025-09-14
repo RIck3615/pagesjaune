@@ -69,14 +69,8 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
 
   useEffect(() => {
     loadCategories();
-    console.log('=== DEBUG USEEFFECT ===');
-    console.log('isEdit:', isEdit);
-    console.log('business:', business);
     
     if (isEdit && business) {
-      console.log('Chargement des données de l\'entreprise...');
-      console.log('business.name:', business.name);
-      console.log('business.description:', business.description);
       // Convertir les heures d'ouverture du backend vers la structure du formulaire
       let openingHours = {
         monday: { open: '', close: '', closed: false },
@@ -111,7 +105,7 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
         });
       }
 
-      const newFormData = {
+      setFormData({
         name: business.name || '',
         description: business.description || '',
         email: business.email || '',
@@ -123,10 +117,7 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
         latitude: business.latitude || '',
         longitude: business.longitude || '',
         opening_hours: openingHours
-      };
-      
-      console.log('Nouveau formData:', newFormData);
-      setFormData(newFormData);
+      });
       
       setSelectedCategories(business.categories?.map(cat => cat.id) || []);
       
@@ -135,25 +126,17 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
       }
       
       if (business.images && business.images.length > 0) {
-        setExistingImages(business.images); // Stocker juste les chemins, pas les URLs complètes
+        setExistingImages(business.images);
       }
-    } else {
-      console.log('Pas en mode édition ou business non défini');
     }
   }, [business, isEdit]);
 
   const loadCategories = async () => {
     try {
-      console.log('🔄 Chargement des catégories...');
-      // Récupérer toutes les catégories (racines et sous-catégories)
       const response = await categoryService.getAll({ root_only: false });
-      console.log('✅ Réponse API catégories:', response);
-      console.log('📋 Catégories chargées:', response.data.data);
-      console.log('📊 Nombre de catégories:', response.data.data?.length || 0);
       setCategories(response.data.data || []);
     } catch (error) {
-      console.error('❌ Erreur lors du chargement des catégories:', error);
-      console.error('📄 Détails de l\'erreur:', error.response?.data);
+      console.error('Erreur lors du chargement des catégories:', error);
       toast.error('Erreur lors du chargement des catégories');
     }
   };
@@ -192,7 +175,6 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
       const newSelection = prev.includes(categoryId)
         ? prev.filter(id => id !== categoryId)
         : [...prev, categoryId];
-      console.log('️ Catégories sélectionnées:', newSelection);
       return newSelection;
     });
   };
@@ -280,25 +262,10 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
     setErrors({});
 
     try {
-      // DEBUG: Vérifier l'état avant de créer FormData
-      console.log('=== ÉTAT COMPLET AVANT ENVOI ===');
-      console.log('formData:', formData);
-      console.log('selectedCategories:', selectedCategories);
-      console.log('logoFile:', logoFile);
-      console.log('imageFiles:', imageFiles);
-      console.log('existingImages:', existingImages);
-      console.log('imagesToDelete:', imagesToDelete);
-      console.log('isEdit:', isEdit);
-      console.log('business.id:', business?.id);
-
       const data = new FormData();
-      
-      // DEBUG: Vérifier chaque étape
-      console.log('=== CRÉATION FORMDATA ===');
       
       // Ajouter les données de base
       Object.keys(formData).forEach(key => {
-        console.log(`Traitement de ${key}:`, formData[key]);
         if (key === 'opening_hours') {
           // Convertir l'objet opening_hours en tableau
           const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -311,77 +278,49 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
               data.append(`opening_hours[${index}][is_open]`, hours.closed ? '0' : '1');
               data.append(`opening_hours[${index}][open_time]`, hours.open || '');
               data.append(`opening_hours[${index}][close_time]`, hours.close || '');
-              console.log(`Ajouté opening_hours[${index}]:`, dayNames[index], hours);
             }
           });
         } else if (formData[key] !== '') {
           data.append(key, formData[key]);
-          console.log(`Ajouté ${key}:`, formData[key]);
-        } else {
-          console.log(`Ignoré ${key} (vide):`, formData[key]);
         }
       });
 
       // Ajouter les catégories
-      console.log('Ajout des catégories:', selectedCategories);
       selectedCategories.forEach(categoryId => {
         data.append('category_ids[]', categoryId);
-        console.log(`Ajouté category_ids[]:`, categoryId);
       });
 
       // Ajouter le logo s'il y en a un nouveau
       if (logoFile) {
         data.append('logo', logoFile);
-        console.log('Ajouté logo:', logoFile);
-      } else {
-        console.log('Pas de logo à ajouter');
       }
 
       // Ajouter les nouvelles images
-      console.log('Ajout des nouvelles images:', imageFiles);
       imageFiles.forEach((image, index) => {
         if (image instanceof File) {
           data.append(`images[${index}]`, image);
-          console.log(`Ajouté images[${index}]:`, image);
         }
       });
 
       // Ajouter les images existantes à conserver
-      console.log('Ajout des images existantes:', existingImages);
       if (isEdit && existingImages.length > 0) {
         existingImages.forEach((image, index) => {
           data.append(`existing_images[${index}]`, image);
-          console.log(`Ajouté existing_images[${index}]:`, image);
         });
-      } else {
-        console.log('Pas d\'images existantes à ajouter');
       }
 
       // Ajouter les images à supprimer
-      console.log('Ajout des images à supprimer:', imagesToDelete);
       if (isEdit && imagesToDelete.length > 0) {
         imagesToDelete.forEach((imagePath, index) => {
           data.append(`images_to_delete[${index}]`, imagePath);
-          console.log(`Ajouté images_to_delete[${index}]:`, imagePath);
         });
-      } else {
-        console.log('Pas d\'images à supprimer');
       }
-
-      // DEBUG: Afficher toutes les données FormData
-      console.log('=== DONNÉES FORMDATA FINALES ===');
-      for (let [key, value] of data.entries()) {
-        console.log(`${key}:`, value);
-      }
-      console.log('=== FIN DEBUG ===');
 
       let response;
       if (isEdit && business) {
-        console.log('Mode édition - Appel update');
         response = await businessService.update(business.id, data);
         toast.success('Entreprise mise à jour avec succès');
       } else {
-        console.log('Mode création - Appel create');
         response = await businessService.create(data);
         toast.success('Entreprise créée avec succès');
       }

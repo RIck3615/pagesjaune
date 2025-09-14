@@ -233,19 +233,6 @@ class BusinessController extends Controller
             ], 403);
         }
 
-        // DEBUG: Log les données reçues
-        \Log::info('=== DEBUG UPDATE BUSINESS ===', [
-            'business_id' => $id,
-            'method' => $request->method(),
-            'content_type' => $request->header('Content-Type'),
-            'request_data' => $request->all(),
-            'files' => $request->file(),
-            'existing_images' => $request->get('existing_images'),
-            'images_to_delete' => $request->get('images_to_delete'),
-            'form_data_keys' => array_keys($request->all()),
-            'has_form_data' => $request->isMethod('POST') || $request->isMethod('PUT'),
-        ]);
-
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
@@ -279,15 +266,6 @@ class BusinessController extends Controller
         }
 
         $data = $request->except(['logo', 'images', 'category_ids', 'existing_images', 'images_to_delete']);
-
-        // DEBUG: Log les données avant traitement
-        \Log::info('=== DONNÉES AVANT TRAITEMENT ===', [
-            'data' => $data,
-            'has_logo' => $request->hasFile('logo'),
-            'has_images' => $request->hasFile('images'),
-            'existing_images_count' => count($request->get('existing_images', [])),
-            'images_to_delete_count' => count($request->get('images_to_delete', []))
-        ]);
 
         // Handle logo upload
         if ($request->hasFile('logo')) {

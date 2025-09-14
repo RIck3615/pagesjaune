@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query'
 import { businessService, reviewService } from '../services/api'
 import { useAuth } from '../hooks/useAuth.jsx'
@@ -14,7 +14,11 @@ import {
   Crown, 
   CheckCircle,
   ArrowLeft,
-  MessageSquare
+  MessageSquare,
+  ExternalLink,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getImageUrl } from '../utils/images';
@@ -29,6 +33,10 @@ const BusinessDetails = () => {
     rating: 5,
     comment: ''
   })
+
+  // États pour le lightbox
+  const [showLightbox, setShowLightbox] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Fetch business details
   const { data: business, isLoading, error } = useQuery(
@@ -64,6 +72,84 @@ const BusinessDetails = () => {
     submitReviewMutation.mutate(reviewForm)
   }
 
+  // Fonctions pour le lightbox
+  const openLightbox = (index) => {
+    setCurrentImageIndex(index);
+    setShowLightbox(true);
+    // Empêcher le scroll du body quand le modal est ouvert
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setShowLightbox(false);
+    document.body.style.overflow = 'unset';
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === business.images.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => 
+      prev === 0 ? business.images.length - 1 : prev - 1
+    );
+  };
+
+  const handleKeyDown = (e) => {
+    if (!showLightbox) return;
+    
+    switch (e.key) {
+      case 'Escape':
+        closeLightbox();
+        break;
+      case 'ArrowRight':
+        nextImage();
+        break;
+      case 'ArrowLeft':
+        prevImage();
+        break;
+    }
+  };
+
+  // AJOUTER CETTE FONCTION MANQUANTE :
+  const renderHours = (hours) => {
+    const dayNames = {
+      'lundi': 'Lundi',
+      'mardi': 'Mardi', 
+      'mercredi': 'Mercredi',
+      'jeudi': 'Jeudi',
+      'vendredi': 'Vendredi',
+      'samedi': 'Samedi',
+      'dimanche': 'Dimanche'
+    };
+
+    return (
+      <div className="space-y-2">
+        {hours.map((day, index) => (
+          <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+            <span className="font-medium text-gray-700">
+              {dayNames[day.day] || day.day}
+            </span>
+            <div className="flex items-center space-x-2">
+              {day.is_open === '1' || day.is_open === 1 ? (
+                <>
+                  <span className="text-sm text-green-600">Ouvert</span>
+                  <span className="text-sm text-gray-600">
+                    {day.open_time} - {day.close_time}
+                  </span>
+                </>
+              ) : (
+                <span className="text-sm text-red-600">Fermé</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const renderRating = (rating) => {
     const stars = []
     for (let i = 1; i <= 5; i++) {
@@ -81,61 +167,22 @@ const BusinessDetails = () => {
     return stars
   }
 
-  const renderHours = (hours) => {
-    if (!hours) return null
-    
-    // Si c'est un tableau (structure du backend)
-    if (Array.isArray(hours)) {
-      const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
-      return (
-        <div className="space-y-2">
-          {days.map((day) => {
-            const dayData = hours.find(h => h.day === day)
-            if (dayData) {
-              // Si l'entreprise est fermée ce jour
-              if (!dayData.is_open || dayData.is_open === '0' || dayData.is_open === 0) {
-                return (
-                  <div key={day} className="flex justify-between">
-                    <span className="text-gray-600 capitalize">{day}</span>
-                    <span className="font-medium text-red-600">Fermé</span>
-                  </div>
-                )
-              }
-              // Si l'entreprise est ouverte ce jour
-              const timeText = `${dayData.open_time || '09:00'} - ${dayData.close_time || '18:00'}`
-              return (
-                <div key={day} className="flex justify-between">
-                  <span className="text-gray-600 capitalize">{day}</span>
-                  <span className="font-medium text-green-600">{timeText}</span>
-                </div>
-              )
-            } else {
-              // Aucune donnée pour ce jour
-              return (
-                <div key={day} className="flex justify-between">
-                  <span className="text-gray-600 capitalize">{day}</span>
-                  <span className="text-gray-500">Non défini</span>
-                </div>
-              )
-            }
-          })}
-        </div>
-      )
-    }
-    
-    // Si c'est un objet (ancienne structure)
-    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
-    return (
-      <div className="space-y-2">
-        {days.map((day) => (
-          <div key={day} className="flex justify-between">
-            <span className="text-gray-600 capitalize">{day}</span>
-            <span className="text-gray-900">{hours[day] || 'Fermé'}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
+  // Ajouter l'event listener pour les touches
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset'; // Nettoyer au démontage
+    };
+  }, [showLightbox]);
+
+  // Au début du composant, ajouter ce useEffect pour gérer le scroll
+  useEffect(() => {
+    return () => {
+      // Nettoyer le style du body au démontage du composant
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -308,6 +355,42 @@ const BusinessDetails = () => {
             </div>
           )}
 
+          {/* Images de l'entreprise */}
+          {business.images && business.images.length > 0 && (
+            <div className="p-6 bg-white border rounded-lg shadow-sm">
+              <h2 className="mb-4 text-xl font-semibold text-gray-900">
+                Photos de l'entreprise ({business.images.length})
+              </h2>
+              
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                {business.images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={getImageUrl(image)}
+                      alt={`${business.name} - Photo ${index + 1}`}
+                      className="object-cover w-full h-48 transition-shadow border rounded-lg"
+                    />
+                    
+                    {/* Bouton de clic pour ouvrir le lightbox */}
+                    <button
+                      onClick={() => {
+                        setShowLightbox(true);
+                        setCurrentImageIndex(index);
+                      }}
+                      className="absolute inset-0 flex items-center justify-center transition-all bg-black bg-opacity-0 rounded-lg group-hover:bg-opacity-20"
+                    >
+                      <div className="transition-opacity opacity-0 group-hover:opacity-100">
+                        <span className="px-3 py-1 text-sm text-white bg-black bg-opacity-50 rounded">
+                          Voir en grand
+                        </span>
+                      </div>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Reviews */}
           <div className="p-6 bg-white border rounded-lg shadow-sm">
             <div className="flex items-center justify-between mb-6">
@@ -428,6 +511,76 @@ const BusinessDetails = () => {
           )}
         </div>
       </div>
+
+      {/* Lightbox Modal */}
+      {showLightbox && business.images && business.images.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+          <div className="relative flex items-center justify-center w-full h-full">
+            {/* Bouton fermer */}
+            <button
+              onClick={closeLightbox}
+              className="absolute z-10 p-2 text-white transition-all bg-black bg-opacity-50 rounded-full top-4 right-4 hover:bg-opacity-75"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Bouton précédent */}
+            {business.images.length > 1 && (
+              <button
+                onClick={prevImage}
+                className="absolute z-10 p-2 text-white transition-all bg-black bg-opacity-50 rounded-full left-4 hover:bg-opacity-75"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Bouton suivant */}
+            {business.images.length > 1 && (
+              <button
+                onClick={nextImage}
+                className="absolute z-10 p-2 text-white transition-all bg-black bg-opacity-50 rounded-full right-4 hover:bg-opacity-75"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Image principale */}
+            <div className="max-w-4xl max-h-full p-4">
+              <img
+                src={getImageUrl(business.images[currentImageIndex])}
+                alt={`${business.name} - Photo ${currentImageIndex + 1}`}
+                className="object-contain w-full h-full rounded-lg"
+              />
+            </div>
+
+            {/* Indicateur de position */}
+            {business.images.length > 1 && (
+              <div className="absolute transform -translate-x-1/2 bottom-4 left-1/2">
+                <div className="flex space-x-2">
+                  {business.images.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentImageIndex(index)}
+                      className={`w-3 h-3 rounded-full transition-all ${
+                        index === currentImageIndex 
+                          ? 'bg-white' 
+                          : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Informations de l'image */}
+            <div className="absolute text-white bottom-4 left-4">
+              <p className="text-sm opacity-75">
+                {currentImageIndex + 1} / {business.images.length}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
