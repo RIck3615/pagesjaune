@@ -19,7 +19,7 @@ const Search = () => {
 
   const query = searchParams.get('q') || '';
 
-  // Fetch businesses based on search parameters
+  // Fetch businesses based on search parameters avec optimisations
   const { data: businesses, isLoading, error, refetch } = useQuery(
     ['businesses', 'search', query, filters],
     async () => {
@@ -46,7 +46,10 @@ const Search = () => {
     {
       select: (response) => response.data.data.data,
       enabled: true,
-      retry: 1
+      retry: 1,
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      cacheTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false, // Éviter les refetch inutiles
     }
   );
 
@@ -97,7 +100,19 @@ const Search = () => {
       premium: false,
       verified: undefined
     });
-    setSearchParams({ q: query });
+    setSearchParams({ q: query }); // Garder seulement la query
+  };
+
+  // Nouvelle fonction pour effacer complètement
+  const handleClearAll = () => {
+    setFilters({
+      category: '',
+      location: '',
+      rating: '',
+      premium: false,
+      verified: undefined
+    });
+    setSearchParams({ q: '' }); // Effacer aussi la query
   };
 
   const hasActiveFilters = Object.values(filters).some(value => 
@@ -117,10 +132,12 @@ const Search = () => {
           <div className="max-w-4xl">
             <SearchBar
               onSearch={handleSearch}
+              onClearAll={handleClearAll} // Nouvelle prop
               categories={categories || []}
               className="bg-white border-2 border-gray-300 focus-within:border-yellow-500"
               placeholder="Que recherchez-vous?"
               locationPlaceholder="Où recherchez-vous?"
+              showClearAllButton={true} // Afficher le bouton "Effacer tout"
             />
           </div>
         </div>
@@ -139,7 +156,7 @@ const Search = () => {
                     onClick={clearFilters}
                     className="text-sm text-blue-600 hover:text-blue-700"
                   >
-                    Effacer tout
+                    Effacer les filtres
                   </button>
                 )}
               </div>

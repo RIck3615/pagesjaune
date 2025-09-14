@@ -15,10 +15,14 @@ class Review extends Model
         'rating',
         'comment',
         'status',
+        'admin_comment',
+        'moderated_at',
+        'moderated_by'
     ];
 
     protected $casts = [
         'rating' => 'integer',
+        'moderated_at' => 'datetime',
     ];
 
     public function business()
@@ -29,6 +33,11 @@ class Review extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function moderator()
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
     }
 
     public function scopeApproved($query)

@@ -28,6 +28,8 @@ Route::prefix('v1')->group(function () {
     // Public business routes
     Route::get('/businesses', [BusinessController::class, 'index']);
     Route::get('/businesses/{business}', [BusinessController::class, 'show']);
+    Route::get('/businesses/{business}/reviews', [BusinessController::class, 'getReviews']);
+    Route::get('/autocomplete', [BusinessController::class, 'autocomplete']);
 
     // Public category routes
     Route::get('/categories', [CategoryController::class, 'index']);
@@ -36,7 +38,11 @@ Route::prefix('v1')->group(function () {
 
     // Public review routes (only approved reviews)
     Route::get('/reviews', [ReviewController::class, 'index']);
+    Route::post('/reviews', [ReviewController::class, 'store'])->middleware('auth:sanctum');
     Route::get('/reviews/{review}', [ReviewController::class, 'show']);
+    Route::put('/reviews/{review}', [ReviewController::class, 'update'])->middleware('auth:sanctum');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->middleware('auth:sanctum');
+    Route::get('/my-reviews', [ReviewController::class, 'myReviews'])->middleware('auth:sanctum');
 
     // Admin routes (SANS middleware auth:sanctum)
     Route::prefix('admin')->group(function () {
@@ -51,6 +57,14 @@ Route::prefix('v1')->group(function () {
 
         // Category management
         Route::get('/categories', [AdminController::class, 'getCategories']);
+
+        // Review management
+        Route::get('/reviews', [AdminController::class, 'getReviews']);
+        Route::put('/reviews/{review}/moderate', [AdminController::class, 'moderateReview']);
+
+        // Business approval
+        Route::put('/businesses/{business}/approve', [AdminController::class, 'approveBusiness']);
+        Route::put('/businesses/{business}/reject', [AdminController::class, 'rejectBusiness']);
     });
 
     // User business routes (SANS middleware auth:sanctum)
@@ -72,5 +86,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('/reviews/{review}', [ReviewController::class, 'update']);
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
     Route::get('/my-reviews', [ReviewController::class, 'myReviews']);
+});
+
+// Admin routes
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/admin/stats', [AdminController::class, 'getStats']);
+    Route::get('/admin/businesses', [AdminController::class, 'getBusinesses']);
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::get('/admin/reviews', [AdminController::class, 'getReviews']);
+    Route::put('/admin/reviews/{review}/moderate', [AdminController::class, 'moderateReview']);
+    Route::put('/admin/businesses/{business}/approve', [AdminController::class, 'approveBusiness']);
+    Route::put('/admin/businesses/{business}/reject', [AdminController::class, 'rejectBusiness']);
 });
 

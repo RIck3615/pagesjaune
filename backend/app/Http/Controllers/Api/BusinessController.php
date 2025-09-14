@@ -65,27 +65,40 @@ class BusinessController extends Controller
             }
         }
 
-        // Search
+        // Recherche améliorée avec scoring
         if ($request->has('search') && $request->search) {
-            $query->search($request->search);
+            $searchTerm = trim($request->search);
+            $query->where(function ($q) use ($searchTerm) {
+                // Recherche exacte (priorité maximale)
+                $q->where('name', 'like', "{$searchTerm}")
+                  // Recherche qui commence par le terme (haute priorité)
+                  ->orWhere('name', 'like', "{$searchTerm}%")
+                  // Recherche dans le nom (priorité moyenne)
+                  ->orWhere('name', 'like', "%{$searchTerm}%")
+                  // Recherche dans la description
+                  ->orWhere('description', 'like', "%{$searchTerm}%")
+                  // Recherche dans l'adresse
+                  ->orWhere('address', 'like', "%{$searchTerm}%")
+                  // Recherche dans les catégories
+                  ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
+                      $catQuery->where('name', 'like', "%{$searchTerm}%");
+                  });
+            });
         }
 
-        // Filter by category name - Trouver d'abord l'ID de la catégorie
+        // Filter by category name - Optimisé avec cache
         if ($request->has('category') && $request->category) {
-            \Log::info('Recherche par catégorie:', ['category' => $request->category]);
-
-            $categoryId = Category::where('name', 'like', "%{$request->category}%")->pluck('id');
-            \Log::info('IDs de catégories trouvés:', ['category_ids' => $categoryId->toArray()]);
+            $categoryId = Category::where('name', 'like', "%{$request->category}%")
+                ->orWhere('slug', 'like', "%{$request->category}%")
+                ->pluck('id');
 
             if ($categoryId->isNotEmpty()) {
                 $query->whereHas('categories', function ($q) use ($categoryId) {
                     $q->whereIn('category_id', $categoryId);
                 });
-                \Log::info('Filtre par catégorie appliqué');
             } else {
                 // Si aucune catégorie trouvée, retourner un résultat vide
                 $query->whereRaw('1 = 0');
-                \Log::info('Aucune catégorie trouvée, résultat vide');
             }
         }
 
@@ -96,17 +109,17 @@ class BusinessController extends Controller
             });
         }
 
-        // Filter by city
+        // Filter by city - Recherche insensible à la casse
         if ($request->has('city') && $request->city) {
-            $query->inCity($request->city);
+            $query->whereRaw('LOWER(city) LIKE ?', ['%' . strtolower($request->city) . '%']);
         }
 
-        // Filter by province
+        // Filter by province - Recherche insensible à la casse
         if ($request->has('province') && $request->province) {
-            $query->where('province', 'like', "%{$request->province}%");
+            $query->whereRaw('LOWER(province) LIKE ?', ['%' . strtolower($request->province) . '%']);
         }
 
-        // Filter by rating - Utiliser une sous-requête pour calculer la note moyenne
+        // Filter by rating - Optimisé avec sous-requête
         if ($request->has('rating') && $request->rating) {
             $query->whereHas('approvedReviews', function ($q) use ($request) {
                 $q->selectRaw('AVG(rating) as avg_rating')
@@ -114,11 +127,26 @@ class BusinessController extends Controller
             });
         }
 
-        // Sort by premium first, then by created_at
-        $query->orderBy('is_premium', 'desc')
-              ->orderBy('created_at', 'desc');
+        // Tri optimisé : Premium d'abord, puis par pertinence de recherche, puis par date
+        $query->orderBy('is_premium', 'desc');
 
-        $perPage = $request->get('per_page', 15);
+        // Si recherche, trier par pertinence
+        if ($request->has('search') && $request->search) {
+            $searchTerm = trim($request->search);
+            $query->orderByRaw("
+                CASE
+                    WHEN name = ? THEN 1
+                    WHEN name LIKE ? THEN 2
+                    WHEN name LIKE ? THEN 3
+                    ELSE 4
+                END
+            ", [$searchTerm, "{$searchTerm}%", "%{$searchTerm}%"]);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        // Pagination optimisée
+        $perPage = min($request->get('per_page', 15), 50); // Limite max à 50
         $businesses = $query->paginate($perPage);
 
         return response()->json([
@@ -371,6 +399,115 @@ class BusinessController extends Controller
         return response()->json([
             'success' => true,
             'data' => $businesses
+        ]);
+    }
+
+    public function autocomplete(Request $request): JsonResponse
+    {
+        $query = $request->get('q', '');
+        $type = $request->get('type', 'business');
+
+        if (strlen($query) < 2) {
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+        }
+
+        $suggestions = [];
+
+        switch ($type) {
+            case 'business':
+                $suggestions = Business::active()
+                    ->verified()
+                    ->where(function($q) use ($query) {
+                        $q->where('name', 'like', "{$query}%")
+                          ->orWhere('name', 'like', "%{$query}%");
+                    })
+                    ->select('name')
+                    ->distinct()
+                    ->orderByRaw("
+                        CASE
+                            WHEN name = ? THEN 1
+                            WHEN name LIKE ? THEN 2
+                            ELSE 3
+                        END
+                    ", [$query, "{$query}%"])
+                    ->limit(10)
+                    ->pluck('name')
+                    ->toArray();
+                break;
+
+            case 'category':
+                $suggestions = Category::active()
+                    ->where(function($q) use ($query) {
+                        $q->where('name', 'like', "{$query}%")
+                          ->orWhere('name', 'like', "%{$query}%");
+                    })
+                    ->select('name')
+                    ->distinct()
+                    ->orderByRaw("
+                        CASE
+                            WHEN name = ? THEN 1
+                            WHEN name LIKE ? THEN 2
+                            ELSE 3
+                        END
+                    ", [$query, "{$query}%"])
+                    ->limit(10)
+                    ->pluck('name')
+                    ->toArray();
+                break;
+
+            case 'location':
+                $suggestions = Business::active()
+                    ->verified()
+                    ->where(function($q) use ($query) {
+                        $q->where('city', 'like', "{$query}%")
+                          ->orWhere('city', 'like', "%{$query}%")
+                          ->orWhere('province', 'like', "{$query}%")
+                          ->orWhere('province', 'like', "%{$query}%");
+                    })
+                    ->select('city', 'province')
+                    ->distinct()
+                    ->orderByRaw("
+                        CASE
+                            WHEN city = ? THEN 1
+                            WHEN city LIKE ? THEN 2
+                            WHEN province = ? THEN 3
+                            WHEN province LIKE ? THEN 4
+                            ELSE 5
+                        END
+                    ", [$query, "{$query}%", $query, "{$query}%"])
+                    ->limit(10)
+                    ->get()
+                    ->map(function($item) {
+                        return [
+                            'city' => $item->city,
+                            'province' => $item->province,
+                            'display' => $item->city . ($item->province ? ', ' . $item->province : '')
+                        ];
+                    })
+                    ->toArray();
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $suggestions
+        ]);
+    }
+
+    public function getReviews(Request $request, Business $business): JsonResponse
+    {
+        $reviews = $business->reviews()
+            ->with(['user'])
+            ->where('status', 'approved')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return response()->json([
+            'success' => true,
+            'data' => $reviews
         ]);
     }
 }

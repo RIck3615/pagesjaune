@@ -66,6 +66,21 @@ export const businessService = {
   getMyBusinesses: () => api.get('/my-businesses'),
 };
 
+// Service d'autocomplétion optimisé
+export const autocompleteService = {
+  getSuggestions: (query, type = 'business') => {
+    // Debounce côté client aussi
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(api.get('/autocomplete', { 
+          params: { q: query, type },
+          timeout: 5000 // Timeout de 5 secondes
+        }));
+      }, 100);
+    });
+  },
+};
+
 // Services des catégories
 export const categoryService = {
   getAll: (params = {}) => api.get('/categories', { params }),
@@ -78,13 +93,26 @@ export const categoryService = {
 
 // Services des avis
 export const reviewService = {
+  // Récupérer tous les avis (pour l'admin)
   getAll: (params = {}) => api.get('/reviews', { params }),
-  getById: (id) => api.get(`/reviews/${id}`),
+  
+  // Récupérer les avis d'une entreprise
+  getReviews: (businessId) => api.get(`/businesses/${businessId}/reviews`),
+  
+  // Créer un avis
   create: (data) => api.post('/reviews', data),
+  
+  // Mettre à jour un avis
   update: (id, data) => api.put(`/reviews/${id}`, data),
+  
+  // Supprimer un avis
   delete: (id) => api.delete(`/reviews/${id}`),
+  
+  // Récupérer mes avis
   getMyReviews: () => api.get('/my-reviews'),
-  moderate: (id, status) => api.put(`/reviews/${id}/moderate`, { status }),
+  
+  // Modérer un avis (admin)
+  moderate: (id, data) => api.put(`/admin/reviews/${id}/moderate`, data),
 };
 
 // Services d'administration

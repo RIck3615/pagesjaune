@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { adminService } from '../../services/api';
+import { adminService, reviewService } from '../../services/api';
 import { 
   Users, 
   Building2, 
@@ -11,7 +11,11 @@ import {
   Clock,
   Star,
   Eye,
-  Search
+  Search,
+  Filter,
+  ThumbsUp,
+  ThumbsDown,
+  AlertTriangle
 } from 'lucide-react';
 import { formatUtils } from '../../utils/format';
 import { getImageUrl } from '../../utils/images';
@@ -24,6 +28,9 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('businesses'); // Nouvel état pour les onglets
+  const [reviewStatusFilter, setReviewStatusFilter] = useState('pending'); // Filtre pour les avis
+  const [reviewSearchTerm, setReviewSearchTerm] = useState(''); // Recherche dans les avis
   const queryClient = useQueryClient();
 
   // Fetch dashboard data
@@ -48,26 +55,41 @@ const AdminDashboard = () => {
 
   // Fetch businesses
   const { data: businessesData, isLoading: businessesLoading } = useQuery(
-    ['admin-businesses', currentPage, searchTerm, statusFilter],
+    ['admin-businesses', searchTerm, statusFilter, currentPage],
     () => adminService.getBusinesses({
-      page: currentPage,
       search: searchTerm,
       status: statusFilter,
-      per_page: 10
+      page: currentPage
     }),
     {
       select: (response) => response.data.data,
-      enabled: true
     }
   );
 
-  // Verify business mutation
+  // Fetch reviews
+  const { data: reviewsData, isLoading: reviewsLoading } = useQuery(
+    ['admin-reviews', reviewStatusFilter, reviewSearchTerm, currentPage],
+    () => reviewService.getAll({
+      status: reviewStatusFilter,
+      search: reviewSearchTerm,
+      page: currentPage
+    }),
+    {
+      select: (response) => response.data.data,
+    }
+  );
+
+  const businesses = businessesData?.data || [];
+  const reviews = reviewsData?.data || [];
+
+  // Mutations pour les entreprises
   const verifyBusinessMutation = useMutation(
     (businessId) => adminService.updateBusiness(businessId, { is_verified: true }),
     {
       onSuccess: () => {
         toast.success('Entreprise vérifiée avec succès');
         queryClient.invalidateQueries(['admin-businesses']);
+        loadDashboardData();
       },
       onError: (error) => {
         toast.error('Erreur lors de la vérification');
@@ -76,13 +98,13 @@ const AdminDashboard = () => {
     }
   );
 
-  // Unverify business mutation
   const unverifyBusinessMutation = useMutation(
     (businessId) => adminService.updateBusiness(businessId, { is_verified: false }),
     {
       onSuccess: () => {
         toast.success('Entreprise non vérifiée');
         queryClient.invalidateQueries(['admin-businesses']);
+        loadDashboardData();
       },
       onError: (error) => {
         toast.error('Erreur lors de la modification');
@@ -91,16 +113,34 @@ const AdminDashboard = () => {
     }
   );
 
-  // Toggle premium mutation
   const togglePremiumMutation = useMutation(
     ({ businessId, isPremium }) => adminService.updateBusiness(businessId, { is_premium: isPremium }),
     {
       onSuccess: () => {
         toast.success('Statut premium modifié');
         queryClient.invalidateQueries(['admin-businesses']);
+        loadDashboardData();
       },
       onError: (error) => {
         toast.error('Erreur lors de la modification');
+        console.error('Erreur:', error);
+      }
+    }
+  );
+
+  // Mutations pour les avis
+  const moderateReviewMutation = useMutation(
+    ({ reviewId, status }) => reviewService.moderate(reviewId, status),
+    {
+      onSuccess: (response, variables) => {
+        const statusText = variables.status === 'approved' ? 'approuvé' : 'rejeté';
+        toast.success(`Avis ${statusText} avec succès`);
+        queryClient.invalidateQueries(['admin-reviews']);
+        queryClient.invalidateQueries(['reviews']);
+        loadDashboardData();
+      },
+      onError: (error) => {
+        toast.error('Erreur lors de la modération');
         console.error('Erreur:', error);
       }
     }
@@ -116,6 +156,53 @@ const AdminDashboard = () => {
 
   const handleTogglePremium = (businessId, currentStatus) => {
     togglePremiumMutation.mutate({ businessId, isPremium: !currentStatus });
+  };
+
+  const handleModerateReview = (reviewId, status) => {
+    moderateReviewMutation.mutate({ reviewId, status });
+  };
+
+  const getReviewStatusBadge = (status) => {
+    const statusConfig = {
+      pending: { 
+        color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
+        text: 'En attente',
+        icon: Clock
+      },
+      approved: { 
+        color: 'bg-green-100 text-green-800 border-green-200', 
+        text: 'Approuvé',
+        icon: CheckCircle
+      },
+      rejected: { 
+        color: 'bg-red-100 text-red-800 border-red-200', 
+        text: 'Rejeté',
+        icon: XCircle
+      }
+    };
+    
+    const config = statusConfig[status] || statusConfig.pending;
+    const Icon = config.icon;
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${config.color}`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {config.text}
+      </span>
+    );
+  };
+
+  const renderStars = (rating) => {
+    return [...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        className={`w-4 h-4 ${
+          i < rating
+            ? 'text-yellow-400 fill-current'
+            : 'text-gray-300'
+        }`}
+      />
+    ));
   };
 
   if (loading) {
@@ -147,30 +234,29 @@ const AdminDashboard = () => {
   }
 
   const { stats, recent_businesses } = dashboardData || {};
-  const businesses = businessesData?.data || [];
-  const pagination = businessesData?.meta || {};
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {/* En-tête */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Tableau de bord administrateur
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">Tableau de bord administrateur</h1>
           <p className="mt-2 text-gray-600">
-            Gérez la plateforme PagesJaunes.cd
+            Gérez les entreprises et modérez les avis
           </p>
         </div>
 
-        {/* Statistiques principales */}
+        {/* Statistiques */}
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
           <div className="p-6 bg-white rounded-lg shadow">
             <div className="flex items-center">
               <Users className="w-8 h-8 text-blue-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Utilisateurs</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_users}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats?.total_users || 0}</p>
+                <p className="text-xs text-gray-500">
+                  utilisateurs inscrits
+                </p>
               </div>
             </div>
           </div>
@@ -180,9 +266,9 @@ const AdminDashboard = () => {
               <Building2 className="w-8 h-8 text-green-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Entreprises</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_businesses}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats?.total_businesses || 0}</p>
                 <p className="text-xs text-gray-500">
-                  {stats.active_businesses} actives
+                  entreprises enregistrées
                 </p>
               </div>
             </div>
@@ -190,12 +276,12 @@ const AdminDashboard = () => {
 
           <div className="p-6 bg-white rounded-lg shadow">
             <div className="flex items-center">
-              <MessageCircle className="w-8 h-8 text-yellow-600" />
+              <MessageCircle className="w-8 h-8 text-orange-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Avis</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.total_reviews}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats?.total_reviews || 0}</p>
                 <p className="text-xs text-gray-500">
-                  {stats.pending_reviews} en attente
+                  avis clients
                 </p>
               </div>
             </div>
@@ -206,7 +292,7 @@ const AdminDashboard = () => {
               <Star className="w-8 h-8 text-purple-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Premium</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.premium_businesses}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats?.premium_businesses || 0}</p>
                 <p className="text-xs text-gray-500">
                   entreprises premium
                 </p>
@@ -215,7 +301,38 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Gestion des entreprises */}
+        {/* Onglets de navigation */}
+        <div className="mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="flex -mb-px space-x-8">
+              <button
+                onClick={() => setActiveTab('businesses')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'businesses'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Building2 className="inline w-4 h-4 mr-2" />
+                Gestion des entreprises
+              </button>
+              <button
+                onClick={() => setActiveTab('reviews')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'reviews'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <MessageCircle className="inline w-4 h-4 mr-2" />
+                Modération des avis
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* Contenu des onglets */}
+        {activeTab === 'businesses' && (
         <div className="mb-8">
           <div className="p-6 bg-white rounded-lg shadow">
             <div className="flex items-center justify-between mb-6">
@@ -301,70 +418,46 @@ const AdminDashboard = () => {
                               </div>
                             )}
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {business.name}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {business.city}, {business.province}
-                              </div>
+                                <div className="text-sm font-medium text-gray-900">{business.name}</div>
+                                <div className="text-sm text-gray-500">{business.city}</div>
                             </div>
                           </div>
                         </td>
-                        
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{business.user?.name}</div>
                           <div className="text-sm text-gray-500">{business.user?.email}</div>
                         </td>
-                        
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
+                            <div className="flex flex-col space-y-1">
                             {business.is_verified ? (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Vérifiée
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                <XCircle className="w-3 h-3 mr-1" />
+                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
+                                  <Clock className="w-3 h-3 mr-1" />
                                 Non vérifiée
                               </span>
                             )}
-                            
                             {business.is_premium && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-800 bg-purple-100 rounded-full">
                                 <Star className="w-3 h-3 mr-1" />
                                 Premium
                               </span>
                             )}
-                            
-                            {!business.is_active && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                Inactive
-                              </span>
-                            )}
                           </div>
                         </td>
-                        
                         <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                          {formatUtils.relativeDate(business.created_at)}
+                            {formatUtils.date(business.created_at)}
                         </td>
-                        
                         <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => window.open(`/business/${business.id}`, '_blank')}
-                              className="text-blue-600 hover:text-blue-900"
-                              title="Voir l'entreprise"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            
+                            <div className="flex space-x-2">
                             {business.is_verified ? (
                               <button
                                 onClick={() => handleUnverify(business.id)}
                                 className="text-yellow-600 hover:text-yellow-900"
-                                title="Décocher la vérification"
-                                disabled={unverifyBusinessMutation.isLoading}
+                                  title="Désactiver la vérification"
                               >
                                 <XCircle className="w-4 h-4" />
                               </button>
@@ -373,17 +466,18 @@ const AdminDashboard = () => {
                                 onClick={() => handleVerify(business.id)}
                                 className="text-green-600 hover:text-green-900"
                                 title="Vérifier l'entreprise"
-                                disabled={verifyBusinessMutation.isLoading}
                               >
                                 <CheckCircle className="w-4 h-4" />
                               </button>
                             )}
-                            
                             <button
                               onClick={() => handleTogglePremium(business.id, business.is_premium)}
-                              className={`${business.is_premium ? 'text-yellow-600 hover:text-yellow-900' : 'text-gray-400 hover:text-yellow-600'}`}
+                                className={`${
+                                  business.is_premium 
+                                    ? 'text-purple-600 hover:text-purple-900' 
+                                    : 'text-gray-400 hover:text-gray-600'
+                                }`}
                               title={business.is_premium ? 'Retirer le statut premium' : 'Ajouter le statut premium'}
-                              disabled={togglePremiumMutation.isLoading}
                             >
                               <Star className="w-4 h-4" />
                             </button>
@@ -393,131 +487,162 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
+              )}
+            </div>
               </div>
             )}
 
-            {/* Pagination */}
-            {pagination.last_page > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 mt-4 bg-white border-t border-gray-200 sm:px-6">
-                <div className="flex justify-between flex-1 sm:hidden">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    Précédent
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.last_page))}
-                    disabled={currentPage === pagination.last_page}
-                    className="relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    Suivant
-                  </button>
+        {/* Gestion des avis */}
+        {activeTab === 'reviews' && (
+          <div className="mb-8">
+            <div className="p-6 bg-white rounded-lg shadow">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Modération des avis</h2>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">
+                    {reviews.filter(r => r.status === 'pending').length} en attente
+                  </span>
+                </div>
                 </div>
                 
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm text-gray-700">
-                      Affichage de <span className="font-medium">{pagination.from}</span> à{' '}
-                      <span className="font-medium">{pagination.to}</span> sur{' '}
-                      <span className="font-medium">{pagination.total}</span> résultats
-                    </p>
+              {/* Filtres et recherche pour les avis */}
+              <div className="mb-6">
+                <div className="flex flex-col gap-4 md:flex-row">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Rechercher dans les avis..."
+                        value={reviewSearchTerm}
+                        onChange={(e) => setReviewSearchTerm(e.target.value)}
+                        className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <nav className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm">
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        Précédent
-                      </button>
-                      
-                      {Array.from({ length: pagination.last_page }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            page === currentPage
-                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                      
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.last_page))}
-                        disabled={currentPage === pagination.last_page}
-                        className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        Suivant
-                      </button>
-                    </nav>
+                  
+                  <div className="flex gap-4">
+                    <select
+                      value={reviewStatusFilter}
+                      onChange={(e) => setReviewStatusFilter(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="pending">En attente</option>
+                      <option value="approved">Approuvés</option>
+                      <option value="rejected">Rejetés</option>
+                      <option value="all">Tous</option>
+                    </select>
                   </div>
                 </div>
               </div>
-            )}
+
+              {/* Liste des avis */}
+              {reviewsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+                  <span className="ml-2 text-gray-600">Chargement...</span>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <h3 className="mb-2 text-lg font-medium text-gray-900">
+                        Aucun avis trouvé
+                      </h3>
+                      <p className="text-gray-500">
+                        Aucun avis ne correspond aux critères sélectionnés.
+                      </p>
+                    </div>
+                  ) : (
+                    reviews.map((review) => (
+                      <div key={review.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-3 space-x-3">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200">
+                                <span className="text-sm font-semibold text-blue-600">
+                                  {review.user?.name?.charAt(0)?.toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-900">{review.user?.name}</h4>
+                                <p className="text-sm text-gray-500">
+                                  Avis pour {review.business?.name}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {formatUtils.date(review.created_at)}
+                                </p>
           </div>
         </div>
 
-        {/* Avis récents - Section corrigée */}
-        <div className="p-6 bg-white rounded-lg shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Avis récents</h2>
+                            <div className="flex items-center mb-3 space-x-4">
+                              <div className="flex items-center space-x-1">
+                                {renderStars(review.rating)}
+                              </div>
+                              {getReviewStatusBadge(review.status)}
           </div>
 
-          <div className="space-y-4">
-            {recent_businesses && recent_businesses.length > 0 ? (
-              recent_businesses.map((business) => (
-                <div key={business.id} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-gray-900">
-                        {business.name}
-                      </span>
-                      <div className="flex items-center">
-                        {business.is_verified && (
-                          <CheckCircle className="w-3 h-3 text-green-500" />
-                        )}
-                        {business.is_premium && (
-                          <Star className="w-3 h-3 text-yellow-500" />
-                        )}
-                      </div>
+                            {review.comment && (
+                              <p className="mb-4 leading-relaxed text-gray-700">
+                                {review.comment}
+                              </p>
+                            )}
+
+                            {/* Actions de modération */}
+                            {review.status === 'pending' && (
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleModerateReview(review.id, 'approved')}
+                                  disabled={moderateReviewMutation.isLoading}
+                                  className="inline-flex items-center px-3 py-1 text-sm font-medium text-green-700 bg-green-100 border border-green-200 rounded-md hover:bg-green-200 disabled:opacity-50"
+                                >
+                                  <ThumbsUp className="w-4 h-4 mr-1" />
+                                  Approuver
+                                </button>
+                                <button
+                                  onClick={() => handleModerateReview(review.id, 'rejected')}
+                                  disabled={moderateReviewMutation.isLoading}
+                                  className="inline-flex items-center px-3 py-1 text-sm font-medium text-red-700 bg-red-100 border border-red-200 rounded-md hover:bg-red-200 disabled:opacity-50"
+                                >
+                                  <ThumbsDown className="w-4 h-4 mr-1" />
+                                  Rejeter
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Actions pour les avis déjà modérés */}
+                            {review.status !== 'pending' && (
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleModerateReview(review.id, 'approved')}
+                                  disabled={moderateReviewMutation.isLoading}
+                                  className="inline-flex items-center px-3 py-1 text-sm font-medium text-green-700 bg-green-100 border border-green-200 rounded-md hover:bg-green-200 disabled:opacity-50"
+                                >
+                                  <ThumbsUp className="w-4 h-4 mr-1" />
+                                  Approuver
+                                </button>
+                                <button
+                                  onClick={() => handleModerateReview(review.id, 'rejected')}
+                                  disabled={moderateReviewMutation.isLoading}
+                                  className="inline-flex items-center px-3 py-1 text-sm font-medium text-red-700 bg-red-100 border border-red-200 rounded-md hover:bg-red-200 disabled:opacity-50"
+                                >
+                                  <ThumbsDown className="w-4 h-4 mr-1" />
+                                  Rejeter
+                                </button>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      {business.is_active ? (
-                        <CheckCircle className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <XCircle className="w-3 h-3 text-red-500" />
                       )}
                     </div>
                   </div>
-                  
-                  <p className="mb-2 text-sm text-gray-600">
-                    {business.city}, {business.province}
-                  </p>
-                  
-                  {business.description && (
-                    <p className="text-sm text-gray-700 line-clamp-2">
-                      {business.description}
-                    </p>
+                      </div>
+                    ))
                   )}
-                  
-                  <p className="mt-2 text-xs text-gray-500">
-                    {formatUtils.relativeDate(business.created_at)}
-                  </p>
                 </div>
-              ))
-            ) : (
-              <p className="py-4 text-center text-gray-500">
-                Aucune entreprise récente
-              </p>
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

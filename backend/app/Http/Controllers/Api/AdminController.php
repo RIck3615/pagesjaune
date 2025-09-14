@@ -40,55 +40,38 @@ class AdminController extends Controller
         return $user;
     }
 
-    public function getDashboard(Request $request): JsonResponse
+    public function getDashboard(): JsonResponse
     {
-        $user = $this->checkAuth($request);
-        if (!$user) {
-            return response()->json(['error' => 'Non autorisé'], 401);
-        }
+        $stats = [
+            'total_users' => User::count(),
+            'total_businesses' => Business::count(),
+            'total_reviews' => Review::count(),
+            'pending_reviews' => Review::where('status', 'pending')->count(),
+            'approved_reviews' => Review::where('status', 'approved')->count(),
+            'rejected_reviews' => Review::where('status', 'rejected')->count(),
+            'verified_businesses' => Business::where('is_verified', true)->count(),
+            'premium_businesses' => Business::where('is_premium', true)->count(),
+            'active_businesses' => Business::where('is_active', true)->count(),
+        ];
 
-        try {
-            $stats = [
-                'total_businesses' => Business::count(),
-                'active_businesses' => Business::where('is_active', true)->count(),
-                'pending_businesses' => Business::where('is_active', false)->count(),
-                'premium_businesses' => Business::where('is_premium', true)->count(),
-                'verified_businesses' => Business::where('is_verified', true)->count(),
-                'total_categories' => Category::count(),
-                'total_reviews' => Review::count(),
-                'total_users' => User::count(),
-            ];
+        $recent_businesses = Business::with(['user', 'categories'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
 
-            $recent_businesses = Business::with(['categories', 'user'])
-                ->latest()
-                ->limit(5)
-                ->get();
+        $recent_reviews = Review::with(['user', 'business'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
 
-            $businesses_by_status = Business::select('is_active', DB::raw('count(*) as count'))
-                ->groupBy('is_active')
-                ->get();
-
-            $businesses_by_premium = Business::select('is_premium', DB::raw('count(*) as count'))
-                ->groupBy('is_premium')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'stats' => $stats,
-                    'recent_businesses' => $recent_businesses,
-                    'businesses_by_status' => $businesses_by_status,
-                    'businesses_by_premium' => $businesses_by_premium,
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du chargement du tableau de bord',
-                'error' => $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'recent_businesses' => $recent_businesses,
+                'recent_reviews' => $recent_reviews,
+            ]
+        ]);
     }
 
     public function getBusinesses(Request $request): JsonResponse
@@ -314,6 +297,99 @@ class AdminController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function getReviews(Request $request): JsonResponse
+    {
+        $query = Review::with(['business', 'user'])
+            ->orderBy('created_at', 'desc');
+
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by rating
+        if ($request->has('rating')) {
+            $query->where('rating', $request->rating);
+        }
+
+        // Search
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('comment', 'like', "%{$search}%")
+                  ->orWhereHas('business', function ($businessQuery) use ($search) {
+                      $businessQuery->where('name', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('user', function ($userQuery) use ($search) {
+                      $userQuery->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $reviews = $query->paginate(20);
+
+        return response()->json([
+            'success' => true,
+            'data' => $reviews
+        ]);
+    }
+
+    public function moderateReview(Request $request, Review $review): JsonResponse
+    {
+        $request->validate([
+            'status' => 'required|in:approved,rejected,pending',
+            'admin_comment' => 'nullable|string|max:500'
+        ]);
+
+        $review->update([
+            'status' => $request->status,
+            'admin_comment' => $request->admin_comment,
+            'moderated_at' => now(),
+            'moderated_by' => auth()->id()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Avis modéré avec succès',
+            'data' => $review->load(['business', 'user'])
+        ]);
+    }
+
+    public function approveBusiness(Request $request, Business $business): JsonResponse
+    {
+        $business->update([
+            'is_active' => true,
+            'approved_at' => now(),
+            'approved_by' => auth()->id()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Entreprise approuvée avec succès',
+            'data' => $business
+        ]);
+    }
+
+    public function rejectBusiness(Request $request, Business $business): JsonResponse
+    {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500'
+        ]);
+
+        $business->update([
+            'is_active' => false,
+            'rejection_reason' => $request->rejection_reason,
+            'rejected_at' => now(),
+            'rejected_by' => auth()->id()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Entreprise rejetée avec succès',
+            'data' => $business
+        ]);
     }
 }
 

@@ -18,10 +18,17 @@ import {
   ExternalLink,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Send,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Plus
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getImageUrl } from '../utils/images';
+import ReviewForm from '../components/Review/ReviewForm';
+import ReviewList from '../components/Review/ReviewList';
 
 const BusinessDetails = () => {
   const { id } = useParams()
@@ -391,95 +398,13 @@ const BusinessDetails = () => {
             </div>
           )}
 
-          {/* Reviews */}
-          <div className="p-6 bg-white border rounded-lg shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Avis clients ({business.reviews_count || 0})
-              </h2>
-              {isAuthenticated && (
-                <button
-                  onClick={() => setShowReviewForm(!showReviewForm)}
-                  className="flex items-center px-4 py-2 space-x-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Laisser un avis</span>
-                </button>
-              )}
-            </div>
-
-            {/* Review Form */}
-            {showReviewForm && (
-              <form onSubmit={handleSubmitReview} className="p-4 mb-6 border border-gray-200 rounded-lg">
-                <h3 className="mb-4 font-semibold text-gray-900">Votre avis</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-gray-700">
-                      Note
-                    </label>
-                    <div className="flex items-center space-x-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
-                          className="focus:outline-none"
-                        >
-                          <Star
-                            className={`w-6 h-6 ${
-                              star <= reviewForm.rating
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-gray-700">
-                      Commentaire (optionnel)
-                    </label>
-                    <textarea
-                      value={reviewForm.comment}
-                      onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Partagez votre expérience..."
-                    />
-                  </div>
-                  <div className="flex space-x-3">
-                    <button
-                      type="submit"
-                      disabled={submitReviewMutation.isLoading}
-                      className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {submitReviewMutation.isLoading ? 'Envoi...' : 'Envoyer l\'avis'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowReviewForm(false)}
-                      className="px-4 py-2 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300"
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </div>
-              </form>
-            )}
-
-            {/* Reviews List */}
-            {business.reviews && business.reviews.length > 0 ? (
-              <div className="space-y-4">
-                {business.reviews.map((review) => (
-                  <ReviewCard key={review.id} review={review} />
-                ))}
-              </div>
-            ) : (
-              <p className="py-8 text-center text-gray-500">
-                Aucun avis pour le moment. Soyez le premier à en laisser un !
-              </p>
-            )}
+          {/* Section des avis */}
+          <div className="mt-8">
+            <ReviewList 
+              businessId={business?.id}
+              businessName={business?.name}
+              canReview={isAuthenticated}
+            />
           </div>
         </div>
 

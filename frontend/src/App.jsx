@@ -27,6 +27,11 @@ import EditBusiness from './pages/EditBusiness';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminBusinesses from './pages/Admin/AdminBusinesses';
 
+// Components for reviews
+import ReviewList from './components/Review/ReviewList';
+import ReviewCard from './components/Review/ReviewCard';
+import ReviewForm from './components/Review/ReviewForm';
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
