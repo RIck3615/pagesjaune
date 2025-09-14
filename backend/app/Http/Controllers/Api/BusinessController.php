@@ -233,6 +233,19 @@ class BusinessController extends Controller
             ], 403);
         }
 
+        // DEBUG: Log les données reçues
+        \Log::info('=== DEBUG UPDATE BUSINESS ===', [
+            'business_id' => $id,
+            'method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+            'request_data' => $request->all(),
+            'files' => $request->file(),
+            'existing_images' => $request->get('existing_images'),
+            'images_to_delete' => $request->get('images_to_delete'),
+            'form_data_keys' => array_keys($request->all()),
+            'has_form_data' => $request->isMethod('POST') || $request->isMethod('PUT'),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
@@ -246,6 +259,8 @@ class BusinessController extends Controller
             'longitude' => 'nullable|numeric',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'existing_images.*' => 'nullable|string',
+            'images_to_delete.*' => 'nullable|string',
             'opening_hours' => 'nullable|array',
             'opening_hours.*.day' => 'required|string',
             'opening_hours.*.is_open' => 'required|boolean',
@@ -263,7 +278,16 @@ class BusinessController extends Controller
             ], 422);
         }
 
-        $data = $request->except(['logo', 'images', 'category_ids']);
+        $data = $request->except(['logo', 'images', 'category_ids', 'existing_images', 'images_to_delete']);
+
+        // DEBUG: Log les données avant traitement
+        \Log::info('=== DONNÉES AVANT TRAITEMENT ===', [
+            'data' => $data,
+            'has_logo' => $request->hasFile('logo'),
+            'has_images' => $request->hasFile('images'),
+            'existing_images_count' => count($request->get('existing_images', [])),
+            'images_to_delete_count' => count($request->get('images_to_delete', []))
+        ]);
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
@@ -275,19 +299,33 @@ class BusinessController extends Controller
             $data['logo'] = $logoPath;
         }
 
-        // Handle images upload
+        // Handle images update
+        $allImages = [];
+
+        // Ajouter les images existantes à conserver
+        if ($request->has('existing_images') && is_array($request->existing_images)) {
+            $allImages = array_merge($allImages, $request->existing_images);
+        }
+
+        // Ajouter les nouvelles images
         if ($request->hasFile('images')) {
-            // Delete old images
-            if ($business->images) {
-                foreach ($business->images as $image) {
-                    Storage::disk('public')->delete($image);
+            foreach ($request->file('images') as $image) {
+                $allImages[] = $image->store('businesses/images', 'public');
+            }
+        }
+
+        // Supprimer les images marquées pour suppression
+        if ($request->has('images_to_delete') && is_array($request->images_to_delete)) {
+            foreach ($request->images_to_delete as $imagePath) {
+                if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                    Storage::disk('public')->delete($imagePath);
                 }
             }
-            $imagePaths = [];
-            foreach ($request->file('images') as $image) {
-                $imagePaths[] = $image->store('businesses/images', 'public');
-            }
-            $data['images'] = $imagePaths;
+        }
+
+        // Mettre à jour le champ images seulement si nécessaire
+        if (!empty($allImages) || $request->hasFile('images') || $request->has('existing_images') || $request->has('images_to_delete')) {
+            $data['images'] = $allImages;
         }
 
         $business->update($data);

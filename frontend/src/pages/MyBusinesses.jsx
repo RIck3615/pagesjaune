@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { businessService } from '../services/api';
 import { formatUtils } from '../utils/format';
+import { getImageUrl } from '../utils/images';
 
 const MyBusinesses = () => {
   const [businesses, setBusinesses] = useState([]);
@@ -116,7 +117,7 @@ const MyBusinesses = () => {
                     <div className="flex items-center space-x-3">
                       {business.logo ? (
                         <img
-                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
+                          src={getImageUrl(business.logo)}
                           alt={business.name}
                           className="object-cover w-12 h-12 rounded-lg"
                         />

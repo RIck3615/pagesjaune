@@ -17,6 +17,7 @@ import {
   MessageSquare
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { getImageUrl } from '../utils/images';
 
 const BusinessDetails = () => {
   const { id } = useParams()
@@ -221,7 +222,7 @@ const BusinessDetails = () => {
           <div className="mt-6 lg:mt-0 lg:ml-8">
             {business.logo && (
               <img
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
+                src={getImageUrl(business.logo)}
                 alt={`Logo de ${business.name}`}
                 className="object-cover w-32 h-32 border rounded-lg"
               />

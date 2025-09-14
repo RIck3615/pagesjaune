@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { businessService, categoryService } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { getImageUrl } from '../../utils/images'; // AJOUTER CETTE LIGNE
 import toast from 'react-hot-toast';
 
 const BusinessForm = ({ business = null, isEdit = false }) => {
@@ -42,10 +43,13 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
       sunday: { open: '', close: '', closed: false }
     }
   });
+  // Ajouter des états pour la gestion des images
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
   const [imageFiles, setImageFiles] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [existingImages, setExistingImages] = useState([]); // Pour les images existantes
+  const [imagesToDelete, setImagesToDelete] = useState([]); // Pour les images à supprimer
   const [errors, setErrors] = useState({});
 
   // Villes populaires en RDC
@@ -65,7 +69,14 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
 
   useEffect(() => {
     loadCategories();
+    console.log('=== DEBUG USEEFFECT ===');
+    console.log('isEdit:', isEdit);
+    console.log('business:', business);
+    
     if (isEdit && business) {
+      console.log('Chargement des données de l\'entreprise...');
+      console.log('business.name:', business.name);
+      console.log('business.description:', business.description);
       // Convertir les heures d'ouverture du backend vers la structure du formulaire
       let openingHours = {
         monday: { open: '', close: '', closed: false },
@@ -100,7 +111,7 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
         });
       }
 
-      setFormData({
+      const newFormData = {
         name: business.name || '',
         description: business.description || '',
         email: business.email || '',
@@ -112,19 +123,22 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
         latitude: business.latitude || '',
         longitude: business.longitude || '',
         opening_hours: openingHours
-      });
+      };
+      
+      console.log('Nouveau formData:', newFormData);
+      setFormData(newFormData);
       
       setSelectedCategories(business.categories?.map(cat => cat.id) || []);
       
       if (business.logo) {
-        setLogoPreview(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`);
+        setLogoPreview(getImageUrl(business.logo));
       }
       
       if (business.images && business.images.length > 0) {
-        setImagePreviews(business.images.map(img => 
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${img}`
-        ));
+        setExistingImages(business.images); // Stocker juste les chemins, pas les URLs complètes
       }
+    } else {
+      console.log('Pas en mode édition ou business non défini');
     }
   }, [business, isEdit]);
 
@@ -183,9 +197,23 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
     });
   };
 
+  // Améliorer la gestion du changement de logo
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validation de la taille (2MB max)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('Le logo ne doit pas dépasser 2MB');
+        return;
+      }
+      
+      // Validation du type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Format de fichier non supporté. Utilisez JPEG, PNG ou GIF');
+        return;
+      }
+
       setLogoFile(file);
       const reader = new FileReader();
       reader.onload = (e) => setLogoPreview(e.target.result);
@@ -193,20 +221,57 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
     }
   };
 
+  // Améliorer la gestion des images multiples
   const handleImagesChange = (e) => {
     const files = Array.from(e.target.files);
-    setImageFiles(prev => [...prev, ...files]);
     
+    // Validation des fichiers
+    const validFiles = [];
     files.forEach(file => {
+      // Validation de la taille (2MB max)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error(`L'image ${file.name} ne doit pas dépasser 2MB`);
+        return;
+      }
+      
+      // Validation du type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Format non supporté pour ${file.name}. Utilisez JPEG, PNG ou GIF`);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    // Limiter à 5 images maximum
+    const totalImages = imageFiles.length + validFiles.length;
+    if (totalImages > 5) {
+      toast.error('Vous ne pouvez pas ajouter plus de 5 images');
+      return;
+    }
+
+    setImageFiles(prev => [...prev, ...validFiles]);
+    
+    validFiles.forEach(file => {
       const reader = new FileReader();
       reader.onload = (e) => setImagePreviews(prev => [...prev, e.target.result]);
       reader.readAsDataURL(file);
     });
   };
 
-  const removeImage = (index) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  // Fonction pour supprimer une image (nouvelle ou existante)
+  const removeImage = (index, isExisting = false) => {
+    if (isExisting) {
+      // Marquer l'image existante pour suppression
+      const imageToDelete = existingImages[index];
+      setImagesToDelete(prev => [...prev, imageToDelete]);
+      setExistingImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      // Supprimer une nouvelle image
+      setImageFiles(prev => prev.filter((_, i) => i !== index));
+      setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -215,10 +280,25 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
     setErrors({});
 
     try {
+      // DEBUG: Vérifier l'état avant de créer FormData
+      console.log('=== ÉTAT COMPLET AVANT ENVOI ===');
+      console.log('formData:', formData);
+      console.log('selectedCategories:', selectedCategories);
+      console.log('logoFile:', logoFile);
+      console.log('imageFiles:', imageFiles);
+      console.log('existingImages:', existingImages);
+      console.log('imagesToDelete:', imagesToDelete);
+      console.log('isEdit:', isEdit);
+      console.log('business.id:', business?.id);
+
       const data = new FormData();
+      
+      // DEBUG: Vérifier chaque étape
+      console.log('=== CRÉATION FORMDATA ===');
       
       // Ajouter les données de base
       Object.keys(formData).forEach(key => {
+        console.log(`Traitement de ${key}:`, formData[key]);
         if (key === 'opening_hours') {
           // Convertir l'objet opening_hours en tableau
           const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -231,37 +311,77 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
               data.append(`opening_hours[${index}][is_open]`, hours.closed ? '0' : '1');
               data.append(`opening_hours[${index}][open_time]`, hours.open || '');
               data.append(`opening_hours[${index}][close_time]`, hours.close || '');
+              console.log(`Ajouté opening_hours[${index}]:`, dayNames[index], hours);
             }
           });
         } else if (formData[key] !== '') {
           data.append(key, formData[key]);
+          console.log(`Ajouté ${key}:`, formData[key]);
+        } else {
+          console.log(`Ignoré ${key} (vide):`, formData[key]);
         }
       });
 
       // Ajouter les catégories
+      console.log('Ajout des catégories:', selectedCategories);
       selectedCategories.forEach(categoryId => {
         data.append('category_ids[]', categoryId);
+        console.log(`Ajouté category_ids[]:`, categoryId);
       });
 
-      // Ajouter les images
+      // Ajouter le logo s'il y en a un nouveau
+      if (logoFile) {
+        data.append('logo', logoFile);
+        console.log('Ajouté logo:', logoFile);
+      } else {
+        console.log('Pas de logo à ajouter');
+      }
+
+      // Ajouter les nouvelles images
+      console.log('Ajout des nouvelles images:', imageFiles);
       imageFiles.forEach((image, index) => {
         if (image instanceof File) {
           data.append(`images[${index}]`, image);
+          console.log(`Ajouté images[${index}]:`, image);
         }
       });
 
-      // Debug: Afficher toutes les données FormData
-      console.log('=== DONNÉES FORMDATA ===');
+      // Ajouter les images existantes à conserver
+      console.log('Ajout des images existantes:', existingImages);
+      if (isEdit && existingImages.length > 0) {
+        existingImages.forEach((image, index) => {
+          data.append(`existing_images[${index}]`, image);
+          console.log(`Ajouté existing_images[${index}]:`, image);
+        });
+      } else {
+        console.log('Pas d\'images existantes à ajouter');
+      }
+
+      // Ajouter les images à supprimer
+      console.log('Ajout des images à supprimer:', imagesToDelete);
+      if (isEdit && imagesToDelete.length > 0) {
+        imagesToDelete.forEach((imagePath, index) => {
+          data.append(`images_to_delete[${index}]`, imagePath);
+          console.log(`Ajouté images_to_delete[${index}]:`, imagePath);
+        });
+      } else {
+        console.log('Pas d\'images à supprimer');
+      }
+
+      // DEBUG: Afficher toutes les données FormData
+      console.log('=== DONNÉES FORMDATA FINALES ===');
       for (let [key, value] of data.entries()) {
         console.log(`${key}:`, value);
       }
-      console.log('========================');
+      console.log('=== FIN DEBUG ===');
 
       let response;
       if (isEdit && business) {
+        console.log('Mode édition - Appel update');
         response = await businessService.update(business.id, data);
         toast.success('Entreprise mise à jour avec succès');
       } else {
+        console.log('Mode création - Appel create');
         response = await businessService.create(data);
         toast.success('Entreprise créée avec succès');
       }
@@ -612,11 +732,23 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
               </label>
               <div className="flex items-center space-x-4">
                 {logoPreview && (
-                  <img
-                    src={logoPreview}
-                    alt="Logo preview"
-                    className="object-cover w-20 h-20 border rounded-lg"
-                  />
+                  <div className="relative">
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className="object-cover w-20 h-20 border rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLogoFile(null);
+                        setLogoPreview(null);
+                      }}
+                      className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 )}
                 <label className="cursor-pointer">
                   <input
@@ -631,13 +763,43 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
                   </div>
                 </label>
               </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Format accepté: JPEG, PNG, GIF. Taille max: 2MB
+              </p>
             </div>
 
             {/* Images multiples */}
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-700">
-                Photos de l'entreprise
+                Photos de l'entreprise ({imageFiles.length + existingImages.length}/5)
               </label>
+              
+              {/* Images existantes (en mode édition) */}
+              {isEdit && existingImages.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-sm text-gray-600">Images existantes:</p>
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    {existingImages.map((image, index) => (
+                      <div key={`existing-${index}`} className="relative">
+                        <img
+                          src={getImageUrl(image)} // Utiliser getImageUrl ici
+                          alt={`Existing ${index + 1}`}
+                          className="object-cover w-full h-24 border rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index, true)}
+                          className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Nouvelles images */}
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 {imagePreviews.map((preview, index) => (
                   <div key={index} className="relative">
@@ -648,26 +810,35 @@ const BusinessForm = ({ business = null, isEdit = false }) => {
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => removeImage(index, false)}
                       className="absolute p-1 text-white bg-red-500 rounded-full -top-2 -right-2 hover:bg-red-600"
                     >
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImagesChange}
-                    className="hidden"
-                  />
-                  <div className="flex items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50">
-                    <Plus className="w-6 h-6 text-gray-400" />
-                  </div>
-                </label>
+                
+                {/* Bouton d'ajout d'images */}
+                {imageFiles.length + existingImages.length < 5 && (
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImagesChange}
+                      className="hidden"
+                    />
+                    <div className="flex flex-col items-center justify-center w-full h-24 border-2 border-gray-300 border-dashed rounded-lg hover:bg-gray-50">
+                      <Plus className="w-6 h-6 text-gray-400" />
+                      <span className="text-xs text-gray-500">Ajouter</span>
+                    </div>
+                  </label>
+                )}
               </div>
+              
+              <p className="mt-1 text-xs text-gray-500">
+                Format accepté: JPEG, PNG, GIF. Taille max: 2MB par image. Maximum 5 images.
+              </p>
             </div>
           </div>
 

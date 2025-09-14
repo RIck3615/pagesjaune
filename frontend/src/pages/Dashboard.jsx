@@ -14,6 +14,7 @@ import {
 import { businessService, reviewService } from '../services/api';
 import { authUtils } from '../utils/auth';
 import { formatUtils } from '../utils/format';
+import { getImageUrl } from '../utils/images';
 
 const Dashboard = () => {
   const [businesses, setBusinesses] = useState([]);
@@ -182,7 +183,7 @@ const Dashboard = () => {
                       <div className="flex items-center space-x-4">
                         {business.logo ? (
                           <img
-                            src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
+                            src={getImageUrl(business.logo)}
                             alt={business.name}
                             className="object-cover w-12 h-12 rounded-lg"
                           />

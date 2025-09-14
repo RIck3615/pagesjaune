@@ -4,7 +4,6 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
   headers: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 });
@@ -16,11 +15,29 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // DEBUG: Log les données avant envoi
+    console.log('=== INTERCEPTEUR REQUEST ===');
+    console.log('URL:', config.url);
+    console.log('Method:', config.method);
+    console.log('Headers:', config.headers);
+    console.log('Data type:', typeof config.data);
+    console.log('Is FormData:', config.data instanceof FormData);
+    
+    if (config.data instanceof FormData) {
+      console.log('FormData entries:');
+      for (let [key, value] of config.data.entries()) {
+        console.log(`${key}:`, value);
+      }
+      config.headers['Content-Type'] = 'multipart/form-data';
+    } else {
+      console.log('Data:', config.data);
+    }
+    console.log('=== FIN INTERCEPTEUR ===');
+    
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Intercepteur pour gérer les réponses
@@ -49,7 +66,18 @@ export const businessService = {
   getAll: (params = {}) => api.get('/businesses', { params }),
   getById: (id) => api.get(`/businesses/${id}`),
   create: (data) => api.post('/businesses', data),
-  update: (id, data) => api.put(`/businesses/${id}`, data),
+  update: (id, data) => {
+    // CORRECTION: Utiliser POST avec _method=PUT pour FormData
+    if (data instanceof FormData) {
+      data.append('_method', 'PUT');
+      return api.post(`/businesses/${id}`, data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    }
+    return api.put(`/businesses/${id}`, data);
+  },
   delete: (id) => api.delete(`/businesses/${id}`),
   getMyBusinesses: () => api.get('/my-businesses'),
 };

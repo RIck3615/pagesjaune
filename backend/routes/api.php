@@ -56,7 +56,8 @@ Route::prefix('v1')->group(function () {
     // User business routes (SANS middleware auth:sanctum)
     Route::get('/my-businesses', [BusinessController::class, 'getMyBusinesses']);
     Route::post('/businesses', [BusinessController::class, 'store']);
-    Route::put('/businesses/{business}', [BusinessController::class, 'update']);
+    Route::post('/businesses/{business}', [BusinessController::class, 'update']); // Accepter POST
+    Route::put('/businesses/{business}', [BusinessController::class, 'update']); // Garder PUT pour JSON
     Route::delete('/businesses/{business}', [BusinessController::class, 'destroy']);
 });
 

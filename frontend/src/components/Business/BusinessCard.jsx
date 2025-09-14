@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Star, Clock, ExternalLink, Crown, CheckCircle } from 'lucide-react';
+import { getImageUrl } from '../../utils/images'; // 2 niveaux vers le haut
 
 const BusinessCard = ({ business, className = "", onBusinessClick }) => {
   const {
@@ -34,7 +35,7 @@ const BusinessCard = ({ business, className = "", onBusinessClick }) => {
           <div className="flex items-center space-x-3">
             {logo ? (
               <img
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${logo}`}
+                src={getImageUrl(logo)}
                 alt={`Logo de ${name}`}
                 className="object-cover w-12 h-12 rounded-lg"
               />
