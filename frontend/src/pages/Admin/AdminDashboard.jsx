@@ -14,6 +14,7 @@ import {
   Search
 } from 'lucide-react';
 import { formatUtils } from '../../utils/format';
+import { getImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -288,7 +289,7 @@ const AdminDashboard = () => {
                           <div className="flex items-center">
                             {business.logo ? (
                               <img
-                                src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/storage/${business.logo}`}
+                                src={getImageUrl(business.logo)}
                                 alt={business.name}
                                 className="object-cover w-10 h-10 rounded-lg"
                               />
