@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, User, LogOut, Building2, Settings, Shield, MapPin } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +10,48 @@ const Header = ({ onSearch }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, isBusiness, logout } = useAuth();
+  
+  // Refs pour gérer le focus
+  const userMenuRef = useRef(null);
+  const mobileMenuRef = useRef(null);
+
+  // Fermer le menu utilisateur quand le focus quitte
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('focusin', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('focusin', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
+
+  // Fermer le menu mobile quand le focus quitte
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('focusin', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('focusin', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -77,11 +119,20 @@ const Header = ({ onSearch }) => {
 
           {/* Desktop Navigation */}
           <div className="items-center hidden space-x-4 md:flex">
+            {/* Lien Carte - Visible pour tous */}
+            <Link
+              to="/map"
+              className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:text-gray-900 hover:bg-gray-50"
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Carte
+            </Link>
+
             {isAuthenticated ? (
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-blue-600"
+                  className="flex items-center px-2 py-1 space-x-2 text-gray-700 rounded-md hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   <User className="w-5 h-5" />
                   <span>{user?.name}</span>
@@ -93,10 +144,11 @@ const Header = ({ onSearch }) => {
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-md shadow-lg">
+                  <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white border border-gray-200 rounded-md shadow-lg">
                     <Link
                       to={getDashboardLink()}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                      onClick={() => setIsUserMenuOpen(false)}
                     >
                       {getDashboardIcon()}
                       {getDashboardText()}
@@ -106,24 +158,20 @@ const Header = ({ onSearch }) => {
                     {isAdmin && (
                       <Link
                         to="/admin/businesses"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                        onClick={() => setIsUserMenuOpen(false)}
                       >
                         <Building2 className="w-4 h-4 mr-2" />
                         Gérer les entreprises
                       </Link>
                     )}
-                    
-                    <Link
-                      to="/map"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Carte
-                    </Link>
 
                     <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => {
+                        handleLogout();
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
                       Déconnexion
@@ -135,13 +183,13 @@ const Header = ({ onSearch }) => {
               <div className="flex items-center space-x-4">
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-blue-600"
+                  className="px-2 py-1 text-gray-700 rounded-md hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   Connexion
                 </Link>
                 <Link
                   to="/register"
-                  className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                  className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
                   S'inscrire
                 </Link>
@@ -153,7 +201,7 @@ const Header = ({ onSearch }) => {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-blue-600"
+              className="p-1 text-gray-700 rounded-md hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -178,7 +226,17 @@ const Header = ({ onSearch }) => {
 
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
-          <div className="py-4 border-t border-gray-200 md:hidden">
+          <div className="py-4 border-t border-gray-200 md:hidden" ref={mobileMenuRef}>
+            {/* Lien Carte - Mobile */}
+            <Link
+              to="/map"
+              className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Carte
+            </Link>
+
             {isAuthenticated ? (
               <div className="space-y-2">
                 <div className="px-4 py-2 text-sm text-gray-500">
@@ -191,7 +249,7 @@ const Header = ({ onSearch }) => {
                 </div>
                 <Link
                   to={getDashboardLink()}
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {getDashboardIcon()}
@@ -202,29 +260,20 @@ const Header = ({ onSearch }) => {
                 {isAdmin && (
                   <Link
                     to="/admin/businesses"
-                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <Building2 className="w-4 h-4 mr-2" />
                     Gérer les entreprises
                   </Link>
                 )}
-                
-                <Link
-                  to="/map"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Carte
-                </Link>
 
                 <button
                   onClick={() => {
                     handleLogout();
                     setIsMenuOpen(false);
                   }}
-                  className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100"
+                  className="block w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                 >
                   Déconnexion
                 </button>
@@ -233,14 +282,14 @@ const Header = ({ onSearch }) => {
               <div className="space-y-2">
                 <Link
                   to="/login"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Connexion
                 </Link>
                 <Link
                   to="/register"
-                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   S'inscrire

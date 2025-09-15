@@ -17,6 +17,7 @@ const SearchBar = ({
   const [location, setLocation] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [selectedLocationIndex, setSelectedLocationIndex] = useState(-1);
@@ -163,6 +164,7 @@ const SearchBar = ({
     // Fermer les suggestions
     setShowSuggestions(false);
     setShowLocationSuggestions(false);
+    setShowRecentSearches(false);
     setHasSearched(true);
     setHasAttemptedSubmit(false);
   }, [query, location, onSearch, navigate]);
@@ -214,6 +216,7 @@ const SearchBar = ({
     } else if (e.key === 'Escape') {
       setShowSuggestions(false);
       setShowLocationSuggestions(false);
+      setShowRecentSearches(false);
     }
   };
 
@@ -230,6 +233,7 @@ const SearchBar = ({
       handleSubmit(e);
     } else if (e.key === 'Escape') {
       setShowLocationSuggestions(false);
+      setShowRecentSearches(false);
     }
   };
 
@@ -240,6 +244,7 @@ const SearchBar = ({
     setSuggestions([]);
     setShowSuggestions(false);
     setShowLocationSuggestions(false);
+    setShowRecentSearches(false);
     setHasSearched(false);
     setShowEmptyState(false);
     setHasAttemptedSubmit(false);
@@ -267,6 +272,7 @@ const SearchBar = ({
     
     if (value.length > 1) {
       setShowSuggestions(true);
+      setShowRecentSearches(false);
     } else {
       setShowSuggestions(false);
     }
@@ -284,6 +290,36 @@ const SearchBar = ({
     }
   };
 
+  // Gérer le focus sur le champ de recherche
+  const handleSearchFocus = () => {
+    if (suggestions.length > 0) {
+      setShowSuggestions(true);
+    } else if (recentSearches.length > 0 && !query) {
+      setShowRecentSearches(true);
+    }
+  };
+
+  // Gérer le blur sur le champ de recherche
+  const handleSearchBlur = () => {
+    // Délai pour permettre le clic sur les suggestions
+    setTimeout(() => {
+      setShowSuggestions(false);
+      setShowRecentSearches(false);
+    }, 200);
+  };
+
+  // Gérer le focus sur le champ de localisation
+  const handleLocationFocus = () => {
+    if (location.length > 1) {
+      setShowLocationSuggestions(true);
+    }
+  };
+
+  // Gérer le blur sur le champ de localisation
+  const handleLocationBlur = () => {
+    setTimeout(() => setShowLocationSuggestions(false), 200);
+  };
+
   return (
     <div className={`relative ${className}`}>
       <form onSubmit={handleSubmit} className="relative">
@@ -298,13 +334,8 @@ const SearchBar = ({
                 value={query}
                 onChange={handleQueryChange}
                 onKeyDown={handleKeyDown}
-                onFocus={() => {
-                  if (suggestions.length > 0) setShowSuggestions(true);
-                }}
-                onBlur={() => {
-                  // Délai pour permettre le clic sur les suggestions
-                  setTimeout(() => setShowSuggestions(false), 200);
-                }}
+                onFocus={handleSearchFocus}
+                onBlur={handleSearchBlur}
                 placeholder={placeholder}
                 className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
               />
@@ -314,6 +345,7 @@ const SearchBar = ({
                   onClick={() => {
                     setQuery('');
                     setShowSuggestions(false);
+                    setShowRecentSearches(false);
                     searchInputRef.current?.focus();
                   }}
                   className="absolute text-gray-400 -translate-y-1/2 right-3 top-1/2 hover:text-gray-600"
@@ -357,12 +389,8 @@ const SearchBar = ({
                 value={location}
                 onChange={handleLocationChange}
                 onKeyDown={handleLocationKeyDown}
-                onFocus={() => {
-                  if (location.length > 1) setShowLocationSuggestions(true);
-                }}
-                onBlur={() => {
-                  setTimeout(() => setShowLocationSuggestions(false), 200);
-                }}
+                onFocus={handleLocationFocus}
+                onBlur={handleLocationBlur}
                 placeholder={locationPlaceholder}
                 className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
               />
@@ -439,7 +467,7 @@ const SearchBar = ({
       </form>
 
       {/* Recherches récentes */}
-      {!showSuggestions && !hasSearched && recentSearches.length > 0 && (
+      {showRecentSearches && !showSuggestions && !hasSearched && recentSearches.length > 0 && (
         <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
           <div className="p-3 border-b border-gray-100">
             <div className="flex items-center">

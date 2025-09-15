@@ -423,20 +423,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Résultats de recherche */}
-      {isSearching && searchResults.length > 0 && (
-        <section className="py-8 bg-white">
-          <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-            <h2 className="mb-6 text-2xl font-bold text-gray-900">Résultats de recherche</h2>
-            <BusinessList
-              businesses={searchResults}
-              className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-              onBusinessClick={handleBusinessClick}
-            />
-          </div>
-        </section>
-      )}
-
       {/* CTA Section */}
       <section className="py-12 bg-yellow-50">
         <div className="px-4 mx-auto text-center max-w-7xl sm:px-6 lg:px-8">
@@ -459,13 +445,6 @@ const Home = () => {
               className="inline-flex items-center px-6 py-3 font-medium text-gray-900 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Inscrire mon entreprise
-            </Link>
-            <Link
-              to="/map"
-              className="inline-flex items-center px-6 py-3 font-medium text-blue-600 transition-colors border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100"
-            >
-              <MapPin className="w-4 h-4 mr-2" />
-              Voir sur la carte
             </Link>
           </div>
         </div>
