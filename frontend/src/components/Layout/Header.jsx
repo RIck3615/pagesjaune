@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, User, LogOut, Building2, Settings, Shield } from 'lucide-react';
+import { Search, Menu, X, User, LogOut, Building2, Settings, Shield, MapPin } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/api';
 
@@ -113,6 +113,14 @@ const Header = ({ onSearch }) => {
                       </Link>
                     )}
                     
+                    <Link
+                      to="/map"
+                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      Carte
+                    </Link>
+
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -202,6 +210,15 @@ const Header = ({ onSearch }) => {
                   </Link>
                 )}
                 
+                <Link
+                  to="/map"
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Carte
+                </Link>
+
                 <button
                   onClick={() => {
                     handleLogout();

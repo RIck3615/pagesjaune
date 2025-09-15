@@ -510,5 +510,93 @@ class BusinessController extends Controller
             'data' => $reviews
         ]);
     }
+
+    public function searchByProximity(Request $request): JsonResponse
+    {
+        $query = Business::with(['categories', 'user']);
+
+        // Filter by active and verified status
+        $query->active()->verified();
+
+        // Recherche textuelle
+        if ($request->has('search') && $request->search) {
+            $searchTerm = trim($request->search);
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'like', "{$searchTerm}")
+                  ->orWhere('name', 'like', "{$searchTerm}%")
+                  ->orWhere('name', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%")
+                  ->orWhere('address', 'like', "%{$searchTerm}%")
+                  ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
+                      $catQuery->where('name', 'like', "%{$searchTerm}%");
+                  });
+            });
+        }
+
+        // Filter by location
+        if ($request->has('location') && $request->location) {
+            $location = trim($request->location);
+            $query->where(function ($q) use ($location) {
+                $q->where('city', 'like', "%{$location}%")
+                  ->orWhere('province', 'like', "%{$location}%")
+                  ->orWhere('address', 'like', "%{$location}%");
+            });
+        }
+
+        // Filter by category
+        if ($request->has('category') && $request->category) {
+            $categoryId = Category::where('name', 'like', "%{$request->category}%")
+                ->orWhere('slug', 'like', "%{$request->category}%")
+                ->pluck('id');
+
+            if ($categoryId->isNotEmpty()) {
+                $query->whereHas('categories', function ($q) use ($categoryId) {
+                    $q->whereIn('category_id', $categoryId);
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        // Recherche par proximité géographique
+        if ($request->has('latitude') && $request->has('longitude')) {
+            $latitude = (float) $request->latitude;
+            $longitude = (float) $request->longitude;
+            $radius = (float) $request->get('radius', 10); // Rayon par défaut de 10 km
+
+            // Utiliser la formule de Haversine pour calculer la distance
+            $query->selectRaw("
+                *,
+                (6371 * acos(
+                    cos(radians(?)) *
+                    cos(radians(latitude)) *
+                    cos(radians(longitude) - radians(?)) +
+                    sin(radians(?)) *
+                    sin(radians(latitude))
+                )) AS distance
+            ", [$latitude, $longitude, $latitude])
+            ->having('distance', '<=', $radius)
+            ->orderBy('distance');
+
+            // Filtrer seulement les entreprises avec des coordonnées GPS
+            $query->whereNotNull('latitude')
+                  ->whereNotNull('longitude')
+                  ->where('latitude', '!=', 0)
+                  ->where('longitude', '!=', 0);
+        } else {
+            // Tri par défaut si pas de géolocalisation
+            $query->orderBy('is_premium', 'desc')
+                  ->orderBy('created_at', 'desc');
+        }
+
+        // Pagination
+        $perPage = min($request->get('per_page', 15), 100);
+        $businesses = $query->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $businesses
+        ]);
+    }
 }
 

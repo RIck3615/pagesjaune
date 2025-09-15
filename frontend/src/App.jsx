@@ -26,6 +26,7 @@ import CreateBusiness from './pages/CreateBusiness';
 import EditBusiness from './pages/EditBusiness';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminBusinesses from './pages/Admin/AdminBusinesses';
+import Map from './pages/Map';
 
 // Components for reviews
 import ReviewList from './components/Review/ReviewList';
@@ -55,6 +56,7 @@ function App() {
                 {/* Public routes */}
                 <Route path="/" element={<Home />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/map" element={<Map />} />
                 <Route path="/business/:id" element={<BusinessDetails />} />
                 
                 {/* Public routes that redirect if authenticated */}

@@ -19,7 +19,10 @@
     "react-hot-toast": "^2.4.0",
     "lucide-react": "^0.263.1",
     "clsx": "^1.2.1",
-    "tailwind-merge": "^1.10.0"
+    "tailwind-merge": "^1.10.0",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1",
+    "geolib": "^3.3.4"
   },
   "devDependencies": {
     "@types/react": "^18.0.28",

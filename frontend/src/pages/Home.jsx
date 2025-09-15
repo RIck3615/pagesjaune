@@ -24,6 +24,7 @@ import {
 import SearchBar from '../components/Search/SearchBar';
 import BusinessList from '../components/Business/BusinessList';
 import { businessService, categoryService } from '../services/api';
+import MapWidget from '../components/Map/MapWidget';
 
 const Home = () => {
   const [featuredBusinesses, setFeaturedBusinesses] = useState([]);
@@ -390,11 +391,24 @@ const Home = () => {
               <p className="mt-4 text-gray-600">Chargement...</p>
             </div>
           ) : featuredBusinesses.length > 0 ? (
-            <BusinessList
-              businesses={featuredBusinesses}
-              className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
-              onBusinessClick={handleBusinessClick}
-            />
+            <div className="grid gap-8 lg:grid-cols-3">
+              {/* Liste des entreprises */}
+              <div className="lg:col-span-2">
+                <BusinessList
+                  businesses={featuredBusinesses}
+                  className="grid grid-cols-1 gap-6 md:grid-cols-2"
+                  onBusinessClick={handleBusinessClick}
+                />
+              </div>
+              
+              {/* Widget de carte */}
+              <div className="lg:col-span-1">
+                <MapWidget
+                  businesses={featuredBusinesses}
+                  className="h-96"
+                />
+              </div>
+            </div>
           ) : (
             <div className="py-12 text-center">
               <h3 className="mb-2 text-lg font-semibold text-gray-900">Aucune entreprise trouvée</h3>
@@ -445,6 +459,13 @@ const Home = () => {
               className="inline-flex items-center px-6 py-3 font-medium text-gray-900 transition-colors bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Inscrire mon entreprise
+            </Link>
+            <Link
+              to="/map"
+              className="inline-flex items-center px-6 py-3 font-medium text-blue-600 transition-colors border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100"
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Voir sur la carte
             </Link>
           </div>
         </div>

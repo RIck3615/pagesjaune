@@ -99,3 +99,6 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::put('/admin/businesses/{business}/reject', [AdminController::class, 'rejectBusiness']);
 });
 
+// Recherche par proximité
+Route::get('/businesses/proximity', [BusinessController::class, 'searchByProximity']);
+

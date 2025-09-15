@@ -64,6 +64,37 @@ export const businessService = {
   },
   delete: (id) => api.delete(`/businesses/${id}`),
   getMyBusinesses: () => api.get('/my-businesses'),
+
+  // Recherche par proximité
+  searchByProximity: async (params) => {
+    const queryParams = new URLSearchParams();
+    
+    if (params.search) queryParams.append('search', params.search);
+    if (params.location) queryParams.append('location', params.location);
+    if (params.latitude) queryParams.append('latitude', params.latitude);
+    if (params.longitude) queryParams.append('longitude', params.longitude);
+    if (params.radius) queryParams.append('radius', params.radius);
+    if (params.category) queryParams.append('category', params.category);
+    if (params.verified !== undefined) queryParams.append('verified', params.verified);
+    if (params.per_page) queryParams.append('per_page', params.per_page);
+
+    const response = await api.get(`/businesses/proximity?${queryParams}`);
+    return response;
+  },
+
+  // Recherche avec géolocalisation
+  searchWithLocation: async (searchTerm, userLocation, radius = 10) => {
+    const params = {
+      search: searchTerm,
+      latitude: userLocation.lat,
+      longitude: userLocation.lng,
+      radius: radius,
+      verified: true,
+      per_page: 50
+    };
+
+    return await businessService.searchByProximity(params);
+  }
 };
 
 // Service d'autocomplétion optimisé
