@@ -2,16 +2,16 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, MapPin, X, Loader2, Clock, TrendingUp, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { autocompleteService } from '../../services/api';
+import { businessService } from '../../services/api';
 
 const SearchBar = ({ 
   onSearch, 
-  onClearAll, // Nouvelle prop pour gérer l'effacement complet
+  onClearAll,
   categories = [], 
   className = '', 
   placeholder = "Que recherchez-vous?",
   locationPlaceholder = "Où recherchez-vous?",
-  showClearAllButton = false // Nouvelle prop pour afficher le bouton "Effacer tout"
+  showClearAllButton = false
 }) => {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('');
@@ -39,450 +39,429 @@ const SearchBar = ({
   useEffect(() => {
     const saved = localStorage.getItem('recentSearches');
     if (saved) {
-      setRecentSearches(JSON.parse(saved));
+      try {
+        const parsed = JSON.parse(saved);
+        // S'assurer que toutes les recherches sont des chaînes
+        const stringSearches = parsed
+          .filter(search => search && typeof search === 'string')
+          .map(search => String(search).trim())
+          .filter(search => search.length > 0);
+        setRecentSearches(stringSearches);
+      } catch (error) {
+        console.error('Erreur lors du parsing des recherches récentes:', error);
+        setRecentSearches([]);
+      }
     }
   }, []);
 
   // Requête pour les suggestions de recherche avec debounce
   const { data: searchSuggestions, isLoading: isLoadingSearch } = useQuery(
     ['autocomplete', 'search', query],
-    () => autocompleteService.getSuggestions(query, 'business'),
+    () => businessService.autocomplete(query),
     {
       enabled: query.length > 1 && !hasSearched,
-      select: (response) => response.data.data,
+      select: (response) => {
+        const data = response?.data?.data;
+        // S'assurer que les données sont un tableau de chaînes
+        if (Array.isArray(data)) {
+          return data
+            .filter(item => item && typeof item === 'string')
+            .map(item => String(item).trim())
+            .filter(item => item.length > 0);
+        }
+        return [];
+      },
       staleTime: 5 * 60 * 1000,
       cacheTime: 10 * 60 * 1000,
     }
   );
 
-  // Requête pour les suggestions de catégories
-  const { data: categorySuggestions, isLoading: isLoadingCategory } = useQuery(
-    ['autocomplete', 'category', query],
-    () => autocompleteService.getSuggestions(query, 'category'),
-    {
-      enabled: query.length > 1 && !hasSearched,
-      select: (response) => response.data.data,
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-    }
-  );
-
-  // Requête pour les suggestions de localisation
-  const { data: locationSuggestions, isLoading: isLoadingLocation } = useQuery(
-    ['autocomplete', 'location', location],
-    () => autocompleteService.getSuggestions(location, 'location'),
-    {
-      enabled: location.length > 1,
-      select: (response) => response.data.data,
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 10 * 60 * 1000,
-    }
-  );
-
-  // Gérer les suggestions de recherche
+  // Gérer les suggestions combinées
   useEffect(() => {
-    // Ne pas afficher de suggestions si une recherche a été effectuée
-    if (hasSearched) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    if (query.length > 1) {
-      const allSuggestions = [
-        ...(searchSuggestions || []),
-        ...(categorySuggestions || [])
-      ];
+    if (query.length > 1 && !hasSearched) {
+      const allSuggestions = [];
       
-      // Si pas de suggestions de l'API, utiliser les suggestions populaires
-      if (allSuggestions.length === 0) {
-        const filtered = popularSuggestions.filter(suggestion =>
-          suggestion.toLowerCase().includes(query.toLowerCase())
-        );
-        setSuggestions(filtered.slice(0, 5));
-      } else {
-        setSuggestions(allSuggestions.slice(0, 8));
+      // Ajouter les suggestions de l'API
+      if (searchSuggestions && Array.isArray(searchSuggestions)) {
+        allSuggestions.push(...searchSuggestions);
       }
-      setShowSuggestions(true);
-    } else if (query.length === 0) {
-      // Afficher les recherches récentes quand le champ est vide
-      setSuggestions(recentSearches.slice(0, 5));
-      setShowSuggestions(recentSearches.length > 0);
+      
+      // Ajouter les suggestions populaires qui correspondent
+      const matchingPopular = popularSuggestions.filter(suggestion => 
+        suggestion.toLowerCase().includes(query.toLowerCase())
+      );
+      allSuggestions.push(...matchingPopular);
+      
+      // Dédupliquer et limiter - s'assurer que tout est des chaînes
+      const uniqueSuggestions = [...new Set(allSuggestions)]
+        .filter(item => item && typeof item === 'string')
+        .map(item => String(item).trim())
+        .filter(item => item.length > 0)
+        .slice(0, 8);
+      
+      setSuggestions(uniqueSuggestions);
+      setShowSuggestions(uniqueSuggestions.length > 0);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-    setSelectedSuggestionIndex(-1);
-  }, [query, searchSuggestions, categorySuggestions, recentSearches, hasSearched]);
+  }, [query, searchSuggestions, hasSearched]);
 
   // Gérer les suggestions de localisation
   useEffect(() => {
-    if (location.length > 1 && locationSuggestions) {
-      setShowLocationSuggestions(true);
+    if (location.length > 1) {
+      const popularCities = [
+        'Kinshasa', 'Lubumbashi', 'Mbuji-Mayi', 'Kananga', 'Kisangani',
+        'Bukavu', 'Goma', 'Matadi', 'Kikwit', 'Tshikapa'
+      ];
+      
+      const matchingCities = popularCities.filter(city => 
+        city.toLowerCase().includes(location.toLowerCase())
+      );
+      
+      setShowLocationSuggestions(matchingCities.length > 0);
     } else {
       setShowLocationSuggestions(false);
     }
-    setSelectedLocationIndex(-1);
-  }, [location, locationSuggestions]);
+  }, [location]);
 
-  const saveRecentSearch = (searchTerm) => {
-    if (!searchTerm.trim()) return;
-    
-    const newRecentSearches = [
-      searchTerm,
-      ...recentSearches.filter(item => item !== searchTerm)
-    ].slice(0, 5);
-    
-    setRecentSearches(newRecentSearches);
-    localStorage.setItem('recentSearches', JSON.stringify(newRecentSearches));
-  };
+  // Fonction de recherche
+  const handleSearch = useCallback((searchQuery, searchLocation) => {
+    const searchData = {
+      term: searchQuery || query,
+      location: searchLocation || location,
+      category: null
+    };
 
+    // Sauvegarder la recherche récente
+    if (searchData.term) {
+      try {
+        const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        const cleanSearches = searches
+          .filter(s => s && typeof s === 'string')
+          .map(s => String(s).trim())
+          .filter(s => s.length > 0);
+        const newSearches = [String(searchData.term).trim(), ...cleanSearches.filter(s => s !== String(searchData.term).trim())].slice(0, 10);
+        localStorage.setItem('recentSearches', JSON.stringify(newSearches));
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde des recherches récentes:', error);
+      }
+    }
+
+    // Appeler la fonction onSearch avec les données formatées
+    if (onSearch) {
+      onSearch(searchData);
+    }
+
+    // Navigation vers la page de recherche
+    const params = new URLSearchParams();
+    if (searchData.term) params.append('q', String(searchData.term));
+    if (searchData.location) params.append('location', String(searchData.location));
+    
+    navigate(`/search?${params.toString()}`);
+    
+    // Fermer les suggestions
+    setShowSuggestions(false);
+    setShowLocationSuggestions(false);
+    setHasSearched(true);
+    setHasAttemptedSubmit(false);
+  }, [query, location, onSearch, navigate]);
+
+  // Gestion de la soumission du formulaire
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Marquer qu'une tentative de soumission a été faite
     setHasAttemptedSubmit(true);
     
-    // Validation des champs vides - seulement au moment de la soumission
-    if (!query.trim() && !location.trim()) {
-      setShowEmptyState(true);
-      // Focus sur le champ de recherche
-      if (searchInputRef.current) {
-        searchInputRef.current.focus();
-      }
-      return;
-    }
-    
     if (query.trim()) {
-      setHasSearched(true);
-      setShowEmptyState(false);
-      saveRecentSearch(query.trim());
-      
-      const searchParams = new URLSearchParams();
-      searchParams.set('q', query.trim());
-      if (location.trim()) {
-        searchParams.set('location', location.trim());
+      handleSearch(query, location);
+    } else {
+      setShowEmptyState(true);
+    }
+  };
+
+  // Gestion des clics sur les suggestions
+  const handleSuggestionClick = (suggestion) => {
+    const cleanSuggestion = String(suggestion).trim();
+    setQuery(cleanSuggestion);
+    setHasSearched(false);
+    handleSearch(cleanSuggestion, location);
+  };
+
+  // Gestion des clics sur les suggestions de localisation
+  const handleLocationSuggestionClick = (city) => {
+    setLocation(city);
+    setShowLocationSuggestions(false);
+    handleSearch(query, city);
+  };
+
+  // Gestion des touches clavier
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+        handleSuggestionClick(suggestions[selectedSuggestionIndex]);
+      } else {
+        handleSubmit(e);
       }
-      navigate(`/search?${searchParams.toString()}`);
-      
-      if (onSearch) {
-        onSearch(query.trim(), { location: location.trim() });
-      }
+    } else if (e.key === 'Escape') {
       setShowSuggestions(false);
       setShowLocationSuggestions(false);
     }
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setQuery(suggestion);
-    setHasSearched(true);
-    setShowSuggestions(false);
-    setSelectedSuggestionIndex(-1);
-    setShowEmptyState(false);
-    setHasAttemptedSubmit(false);
-    saveRecentSearch(suggestion);
-    
-    const searchParams = new URLSearchParams();
-    searchParams.set('q', suggestion);
-    if (location.trim()) {
-      searchParams.set('location', location.trim());
-    }
-    navigate(`/search?${searchParams.toString()}`);
-    
-    if (onSearch) {
-      onSearch(suggestion, { location: location.trim() });
+  // Gestion des touches clavier pour la localisation
+  const handleLocationKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedLocationIndex(prev => prev + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedLocationIndex(prev => prev > 0 ? prev - 1 : -1);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSubmit(e);
+    } else if (e.key === 'Escape') {
+      setShowLocationSuggestions(false);
     }
   };
 
-  const handleLocationSuggestionClick = (suggestion) => {
-    setLocation(suggestion.display || suggestion);
-    setShowLocationSuggestions(false);
-    setSelectedLocationIndex(-1);
-  };
-
-  const clearRecentSearches = () => {
-    setRecentSearches([]);
-    localStorage.removeItem('recentSearches');
-  };
-
-  // Fonction pour effacer tout
-  const handleClearAll = () => {
+  // Effacer la recherche
+  const clearSearch = () => {
     setQuery('');
     setLocation('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setShowLocationSuggestions(false);
     setHasSearched(false);
     setShowEmptyState(false);
     setHasAttemptedSubmit(false);
-    setShowSuggestions(false);
-    setShowLocationSuggestions(false);
-    
-    // Naviguer vers la page de recherche vide
-    navigate('/search?q=');
-    
-    // Appeler la fonction de callback si fournie
+    setSelectedSuggestionIndex(-1);
+    setSelectedLocationIndex(-1);
+    searchInputRef.current?.focus();
+  };
+
+  // Effacer tout
+  const clearAll = () => {
+    clearSearch();
     if (onClearAll) {
       onClearAll();
     }
   };
 
-  // Réinitialiser l'état de recherche quand l'utilisateur commence à taper
-  const handleInputChange = (e) => {
-    const newQuery = e.target.value;
-    setQuery(newQuery);
+  // Gérer les changements d'input
+  const handleQueryChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+    setHasSearched(false);
+    setShowEmptyState(false);
+    setHasAttemptedSubmit(false);
+    setSelectedSuggestionIndex(-1);
     
-    // Si l'utilisateur efface complètement le champ, réinitialiser l'état de recherche
-    if (newQuery.length === 0) {
-      setHasSearched(false);
-    }
-    
-    // Masquer l'erreur quand l'utilisateur commence à taper
-    if (newQuery.length > 0) {
-      setShowEmptyState(false);
+    if (value.length > 1) {
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
     }
   };
 
   const handleLocationChange = (e) => {
-    const newLocation = e.target.value;
-    setLocation(newLocation);
+    const value = e.target.value;
+    setLocation(value);
+    setSelectedLocationIndex(-1);
     
-    // Masquer l'erreur quand l'utilisateur commence à taper
-    if (newLocation.length > 0) {
-      setShowEmptyState(false);
-    }
-  };
-
-  const handleKeyDown = (e, type) => {
-    if (type === 'search') {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedSuggestionIndex(prev => 
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedSuggestionIndex(prev => prev > 0 ? prev - 1 : -1);
-      } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
-        e.preventDefault();
-        handleSuggestionClick(suggestions[selectedSuggestionIndex]);
-      } else if (e.key === 'Escape') {
-        setShowSuggestions(false);
-        setSelectedSuggestionIndex(-1);
-        setShowEmptyState(false);
-      }
-    } else if (type === 'location') {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedLocationIndex(prev => 
-          prev < (locationSuggestions?.length || 0) - 1 ? prev + 1 : prev
-        );
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedLocationIndex(prev => prev > 0 ? prev - 1 : -1);
-      } else if (e.key === 'Enter' && selectedLocationIndex >= 0) {
-        e.preventDefault();
-        handleLocationSuggestionClick(locationSuggestions[selectedLocationIndex]);
-      } else if (e.key === 'Escape') {
-        setShowLocationSuggestions(false);
-        setSelectedLocationIndex(-1);
-      }
-    }
-  };
-
-  const handleInputFocus = (type) => {
-    if (type === 'search') {
-      // Ne pas afficher les suggestions si une recherche a été effectuée
-      if (hasSearched) return;
-      
-      if (query.length > 1) {
-        setShowSuggestions(true);
-      } else if (recentSearches.length > 0) {
-        setSuggestions(recentSearches.slice(0, 5));
-        setShowSuggestions(true);
-      } else {
-        // Afficher les suggestions populaires si pas de recherches récentes
-        setSuggestions(popularSuggestions.slice(0, 5));
-        setShowSuggestions(true);
-      }
-    } else if (type === 'location' && location.length > 1) {
+    if (value.length > 1) {
       setShowLocationSuggestions(true);
+    } else {
+      setShowLocationSuggestions(false);
     }
-  };
-
-  const handleInputBlur = (type) => {
-    // Délai pour permettre le clic sur les suggestions
-    setTimeout(() => {
-      if (type === 'search') {
-        setShowSuggestions(false);
-        setSelectedSuggestionIndex(-1);
-      } else if (type === 'location') {
-        setShowLocationSuggestions(false);
-        setSelectedLocationIndex(-1);
-      }
-    }, 200);
   };
 
   return (
     <div className={`relative ${className}`}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
-        {/* Champ de recherche principal */}
-        <div className="relative flex-1">
-          <div className="relative">
-            <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={query}
-              onChange={handleInputChange}
-              onFocus={() => handleInputFocus('search')}
-              onBlur={() => handleInputBlur('search')}
-              onKeyDown={(e) => handleKeyDown(e, 'search')}
-              placeholder={placeholder}
-              className={`w-full py-3 pl-10 pr-4 text-lg border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 ${
-                showEmptyState && hasAttemptedSubmit ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-            />
-            {(isLoadingSearch || isLoadingCategory) && !hasSearched && (
-              <Loader2 className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 right-10 top-1/2 animate-spin" />
-            )}
-            {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery('');
-                  setHasSearched(false);
-                  setShowEmptyState(false);
-                  setHasAttemptedSubmit(false);
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {/* Champ de recherche principal */}
+          <div className="relative flex-1">
+            <div className="relative">
+              <Search className="absolute w-4 h-4 text-gray-400 -translate-y-1/2 left-3 top-1/2" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={handleQueryChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true);
                 }}
-                className="absolute text-gray-400 transform -translate-y-1/2 right-3 top-1/2 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          
-          {/* Message d'erreur pour les champs vides - seulement après tentative de soumission */}
-          {showEmptyState && hasAttemptedSubmit && !query.trim() && !location.trim() && (
-            <div className="absolute z-10 w-full p-3 mt-1 border border-red-200 rounded-lg shadow-lg bg-red-50">
-              <div className="flex items-center text-red-600">
-                <AlertCircle className="w-4 h-4 mr-2" />
-                <span className="text-sm">Veuillez saisir au moins un terme de recherche ou une localisation</span>
-              </div>
+                onBlur={() => {
+                  // Délai pour permettre le clic sur les suggestions
+                  setTimeout(() => setShowSuggestions(false), 200);
+                }}
+                placeholder={placeholder}
+                className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setShowSuggestions(false);
+                    searchInputRef.current?.focus();
+                  }}
+                  className="absolute text-gray-400 -translate-y-1/2 right-3 top-1/2 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-          )}
-          
-          {/* Suggestions de recherche - Ne s'affichent que si pas de recherche effectuée */}
-          {showSuggestions && suggestions.length > 0 && !hasSearched && !showEmptyState && (
-            <div className="absolute z-10 w-full mt-1 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg max-h-60">
-              {/* En-tête pour les recherches récentes */}
-              {query.length === 0 && recentSearches.length > 0 && (
-                <div className="flex items-center justify-between px-4 py-2 text-sm text-gray-500 border-b bg-gray-50">
-                  <div className="flex items-center">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Recherches récentes
-                  </div>
+
+            {/* Suggestions de recherche */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg max-h-60">
+                {suggestions.map((suggestion, index) => (
                   <button
+                    key={index}
                     type="button"
-                    onClick={clearRecentSearches}
-                    className="text-xs text-gray-400 hover:text-gray-600"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-50 ${
+                      index === selectedSuggestionIndex ? 'bg-gray-50' : ''
+                    } ${index === 0 ? 'rounded-t-lg' : ''} ${
+                      index === suggestions.length - 1 ? 'rounded-b-lg' : ''
+                    }`}
                   >
-                    Effacer
+                    <div className="flex items-center">
+                      <Search className="w-4 h-4 mr-2 text-gray-400" />
+                      <span className="text-gray-900">{String(suggestion)}</span>
+                    </div>
                   </button>
-                </div>
-              )}
-              
-              {/* En-tête pour les suggestions */}
-              {query.length > 0 && (
-                <div className="flex items-center px-4 py-2 text-sm text-gray-500 border-b bg-gray-50">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Suggestions
-                </div>
-              )}
-              
-              {/* En-tête pour les suggestions populaires */}
-              {query.length === 0 && recentSearches.length === 0 && (
-                <div className="flex items-center px-4 py-2 text-sm text-gray-500 border-b bg-gray-50">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Suggestions populaires
-                </div>
-              )}
-              
-              {suggestions.map((suggestion, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                    index === selectedSuggestionIndex ? 'bg-yellow-50 text-yellow-700' : ''
-                  }`}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Champ de localisation */}
-        <div className="relative sm:w-64">
-          <div className="relative">
-            <MapPin className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
-            <input
-              ref={locationInputRef}
-              type="text"
-              value={location}
-              onChange={handleLocationChange}
-              onFocus={() => handleInputFocus('location')}
-              onBlur={() => handleInputBlur('location')}
-              onKeyDown={(e) => handleKeyDown(e, 'location')}
-              placeholder={locationPlaceholder}
-              className={`w-full py-3 pl-10 pr-4 text-lg border border-l-0 border-gray-300 sm:border-l sm:border-r-0 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 ${
-                showEmptyState && hasAttemptedSubmit ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-            />
-            {isLoadingLocation && (
-              <Loader2 className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 right-10 top-1/2 animate-spin" />
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Suggestions de localisation */}
-          {showLocationSuggestions && locationSuggestions && locationSuggestions.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 overflow-y-auto bg-white border border-gray-300 rounded-lg shadow-lg max-h-60">
-              {locationSuggestions.map((suggestion, index) => (
+          {/* Champ de localisation */}
+          <div className="relative flex-1">
+            <div className="relative">
+              <MapPin className="absolute w-4 h-4 text-gray-400 -translate-y-1/2 left-3 top-1/2" />
+              <input
+                ref={locationInputRef}
+                type="text"
+                value={location}
+                onChange={handleLocationChange}
+                onKeyDown={handleLocationKeyDown}
+                onFocus={() => {
+                  if (location.length > 1) setShowLocationSuggestions(true);
+                }}
+                onBlur={() => {
+                  setTimeout(() => setShowLocationSuggestions(false), 200);
+                }}
+                placeholder={locationPlaceholder}
+                className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+              />
+              {location && (
                 <button
-                  key={index}
                   type="button"
-                  onClick={() => handleLocationSuggestionClick(suggestion)}
-                  className={`w-full px-4 py-2 text-left hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
-                    index === selectedLocationIndex ? 'bg-yellow-50 text-yellow-700' : ''
-                  }`}
+                  onClick={() => {
+                    setLocation('');
+                    setShowLocationSuggestions(false);
+                    locationInputRef.current?.focus();
+                  }}
+                  className="absolute text-gray-400 -translate-y-1/2 right-3 top-1/2 hover:text-gray-600"
                 >
-                  {suggestion.display || suggestion}
+                  <X className="w-4 h-4" />
                 </button>
-              ))}
+              )}
             </div>
-          )}
+
+            {/* Suggestions de localisation */}
+            {showLocationSuggestions && (
+              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+                {['Kinshasa', 'Lubumbashi', 'Mbuji-Mayi', 'Kananga', 'Kisangani', 'Bukavu', 'Goma', 'Matadi', 'Kikwit', 'Tshikapa']
+                  .filter(city => city.toLowerCase().includes(location.toLowerCase()))
+                  .map((city, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleLocationSuggestionClick(city)}
+                      className="w-full px-4 py-2 text-left rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex items-center">
+                        <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="text-gray-900">{city}</span>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bouton de recherche */}
+          <button
+            type="submit"
+            className="px-6 py-3 font-medium text-white transition-colors bg-yellow-500 rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+          >
+            {isLoadingSearch ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              'Rechercher'
+            )}
+          </button>
         </div>
 
-        {/* Bouton de recherche */}
-        <button
-          type="submit"
-          className="flex items-center justify-center px-8 py-3 font-medium text-white transition-colors bg-yellow-500 rounded-l-lg rounded-r-lg hover:bg-yellow-600 sm:rounded-l-none sm:rounded-r-lg"
-        >
-          <Search className="w-5 h-5 mr-2" />
-          Rechercher
-        </button>
+        {/* Message d'erreur si recherche vide */}
+        {hasAttemptedSubmit && !query.trim() && (
+          <div className="flex items-center mt-2 text-red-600">
+            <AlertCircle className="w-4 h-4 mr-1" />
+            <span className="text-sm">Veuillez saisir un terme de recherche</span>
+          </div>
+        )}
+
+        {/* Bouton Effacer tout */}
+        {showClearAllButton && (query || location) && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={clearAll}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Effacer tout
+            </button>
+          </div>
+        )}
       </form>
 
-      {/* Bouton "Effacer tout" - affiché seulement si showClearAllButton est true */}
-      {showClearAllButton && (query.trim() || location.trim()) && (
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={handleClearAll}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Effacer tout
-          </button>
+      {/* Recherches récentes */}
+      {!showSuggestions && !hasSearched && recentSearches.length > 0 && (
+        <div className="absolute z-40 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
+          <div className="p-3 border-b border-gray-100">
+            <div className="flex items-center">
+              <Clock className="w-4 h-4 mr-2 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">Recherches récentes</span>
+            </div>
+          </div>
+          <div className="overflow-y-auto max-h-48">
+            {recentSearches.slice(0, 5).map((search, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => handleSuggestionClick(search)}
+                className="w-full px-4 py-2 text-left border-b border-gray-100 hover:bg-gray-50 last:border-b-0"
+              >
+                <div className="flex items-center">
+                  <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                  <span className="text-gray-900">{String(search)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

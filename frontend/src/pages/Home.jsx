@@ -92,24 +92,50 @@ const Home = () => {
   const loadRecentData = () => {
     // Charger les recherches récentes depuis localStorage
     const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-    setRecentSearches(searches.slice(0, 5));
+    // S'assurer que les recherches sont des chaînes de caractères et nettoyer les données
+    const stringSearches = searches
+      .filter(search => search && typeof search === 'string')
+      .map(search => String(search).trim())
+      .filter(search => search.length > 0);
+    setRecentSearches(stringSearches.slice(0, 5));
 
     // Charger les entreprises récemment consultées
     const businesses = JSON.parse(localStorage.getItem('recentBusinesses') || '[]');
     setRecentBusinesses(businesses.slice(0, 5));
   };
 
-  const handleSearch = async (query, filters = {}) => {
+  const handleSearch = async (searchData, filters = {}) => {
     try {
       setIsSearching(true);
       
-      // Sauvegarder la recherche récente
+      // Gérer les deux formats : string ou object
+      let searchTerm;
+      if (typeof searchData === 'string') {
+        searchTerm = searchData;
+      } else if (searchData && searchData.term) {
+        searchTerm = searchData.term;
+      } else {
+        console.error('Format de recherche invalide:', searchData);
+        return;
+      }
+      
+      // S'assurer que searchTerm est une chaîne valide
+      if (!searchTerm || typeof searchTerm !== 'string') {
+        console.error('Terme de recherche invalide:', searchTerm);
+        return;
+      }
+      
+      // Sauvegarder la recherche récente (seulement la chaîne)
       const searches = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-      const newSearches = [query, ...searches.filter(s => s !== query)].slice(0, 10);
+      const cleanSearches = searches
+        .filter(s => s && typeof s === 'string')
+        .map(s => String(s).trim())
+        .filter(s => s.length > 0);
+      const newSearches = [searchTerm.trim(), ...cleanSearches.filter(s => s !== searchTerm.trim())].slice(0, 10);
       localStorage.setItem('recentSearches', JSON.stringify(newSearches));
       
       const response = await businessService.getAll({
-        search: query,
+        search: searchTerm,
         ...filters,
         per_page: 12
       });
@@ -190,11 +216,11 @@ const Home = () => {
                     {recentSearches.map((search, index) => (
                       <Link
                         key={index}
-                        to={`/search?q=${encodeURIComponent(search)}`}
+                        to={`/search?q=${encodeURIComponent(String(search))}`}
                         className="block p-3 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-gray-700">{search}</span>
+                          <span className="text-gray-700">{String(search)}</span>
                           <ChevronRight className="w-4 h-4 text-gray-400" />
                         </div>
                       </Link>
