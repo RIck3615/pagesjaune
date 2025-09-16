@@ -166,6 +166,14 @@ const Header = ({ onSearch }) => {
                       </Link>
                     )}
 
+                    <Link
+                      to="/subscription"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      Mon abonnement
+                    </Link>
+
                     <button
                       onClick={() => {
                         handleLogout();
@@ -267,6 +275,14 @@ const Header = ({ onSearch }) => {
                     Gérer les entreprises
                   </Link>
                 )}
+
+                <Link
+                  to="/subscription"
+                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Mon abonnement
+                </Link>
 
                 <button
                   onClick={() => {

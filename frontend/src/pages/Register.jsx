@@ -40,7 +40,12 @@ const Register = () => {
       const result = await register(formData);
       
       if (result.success) {
-        // Redirection automatique gérée par PublicRoute
+        // Rediriger vers la sélection de plan pour les entreprises
+        if (formData.role === 'business') {
+          navigate('/choose-plan');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setError(result.error || 'Erreur lors de l\'inscription');
       }
@@ -143,6 +148,11 @@ const Register = () => {
                   <option value="business">Entreprise</option>
                 </select>
               </div>
+              {formData.role === 'business' && (
+                <p className="mt-2 text-sm text-blue-600">
+                  💡 En tant qu'entreprise, vous pourrez choisir un plan d'abonnement après l'inscription
+                </p>
+              )}
             </div>
 
             <div>

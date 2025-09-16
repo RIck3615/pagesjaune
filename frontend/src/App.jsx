@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 
 // Auth
 import { AuthProvider } from './hooks/useAuth';
+import { SubscriptionProvider } from './hooks/useSubscription';
 
 // Layout components
 import Header from './components/Layout/Header';
@@ -20,6 +21,8 @@ import Search from './pages/Search';
 import BusinessDetails from './pages/BusinessDetails';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ChoosePlan from './pages/ChoosePlan';
+import SubscriptionManagement from './pages/SubscriptionManagement';
 import Dashboard from './pages/Dashboard';
 import MyBusinesses from './pages/MyBusinesses';
 import CreateBusiness from './pages/CreateBusiness';
@@ -47,111 +50,123 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
-          <div className="flex flex-col min-h-screen bg-gray-50">
-            <Header />
-            
-            <main className="flex-1">
-              <Routes>
-                {/* Public routes */}
-                <Route path="/" element={<Home />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/map" element={<Map />} />
-                <Route path="/business/:id" element={<BusinessDetails />} />
-                
-                {/* Public routes that redirect if authenticated */}
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                } />
-                <Route path="/register" element={
-                  <PublicRoute>
-                    <Register />
-                  </PublicRoute>
-                } />
-                
-                {/* Protected routes */}
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/my-businesses" element={
-                  <ProtectedRoute>
-                    <MyBusinesses />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/new" element={
-                  <ProtectedRoute>
-                    <CreateBusiness />
-                  </ProtectedRoute>
-                } />
-                <Route path="/business/:id/edit" element={
-                  <ProtectedRoute>
-                    <EditBusiness />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Admin routes */}
-                <Route path="/admin/dashboard" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin/businesses" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <AdminBusinesses />
-                  </ProtectedRoute>
-                } />
-                
-                {/* 404 route */}
-                <Route path="*" element={
-                  <div className="flex items-center justify-center min-h-screen">
-                    <div className="text-center">
-                      <h1 className="mb-4 text-4xl font-bold text-gray-900">404</h1>
-                      <p className="mb-6 text-gray-600">Page non trouvée</p>
-                      <a
-                        href="/"
-                        className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                      >
-                        Retour à l'accueil
-                      </a>
+        <SubscriptionProvider>
+          <Router>
+            <div className="flex flex-col min-h-screen bg-gray-50">
+              <Header />
+              
+              <main className="flex-1">
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/map" element={<Map />} />
+                  <Route path="/business/:id" element={<BusinessDetails />} />
+                  
+                  {/* Public routes that redirect if authenticated */}
+                  <Route path="/login" element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  } />
+                  <Route path="/register" element={
+                    <PublicRoute>
+                      <Register />
+                    </PublicRoute>
+                  } />
+                  
+                  {/* Protected routes */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/choose-plan" element={
+                    <ProtectedRoute>
+                      <ChoosePlan />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/subscription" element={
+                    <ProtectedRoute>
+                      <SubscriptionManagement />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/my-businesses" element={
+                    <ProtectedRoute>
+                      <MyBusinesses />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/business/new" element={
+                    <ProtectedRoute>
+                      <CreateBusiness />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/business/:id/edit" element={
+                    <ProtectedRoute>
+                      <EditBusiness />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin routes */}
+                  <Route path="/admin/dashboard" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/businesses" element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <AdminBusinesses />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* 404 route */}
+                  <Route path="*" element={
+                    <div className="flex items-center justify-center min-h-screen">
+                      <div className="text-center">
+                        <h1 className="mb-4 text-4xl font-bold text-gray-900">404</h1>
+                        <p className="mb-6 text-gray-600">Page non trouvée</p>
+                        <a
+                          href="/"
+                          className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                        >
+                          Retour à l'accueil
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                } />
-              </Routes>
-            </main>
-            
-            <Footer />
-            
-            {/* Toast notifications */}
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
-                  iconTheme: {
-                    primary: '#4ade80',
-                    secondary: '#fff',
+                  } />
+                </Routes>
+              </main>
+              
+              <Footer />
+              
+              {/* Toast notifications */}
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#363636',
+                    color: '#fff',
                   },
-                },
-                error: {
-                  duration: 5000,
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
+                  success: {
+                    duration: 3000,
+                    iconTheme: {
+                      primary: '#4ade80',
+                      secondary: '#fff',
+                    },
                   },
-                },
-              }}
-            />
-          </div>
-        </Router>
+                  error: {
+                    duration: 5000,
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+            </div>
+          </Router>
+        </SubscriptionProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

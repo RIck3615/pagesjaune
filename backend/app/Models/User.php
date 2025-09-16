@@ -76,22 +76,52 @@ class User extends Authenticatable
 
     public function canCreateBusiness()
     {
+        $currentCount = $this->businesses()->count();
+
         if (!$this->hasActiveSubscription()) {
-            return $this->businesses()->count() < 1; // Gratuit = 1 entreprise
+            // Plan gratuit : 1 entreprise maximum
+            return $currentCount < 1;
         }
 
         $plan = $this->currentSubscription->plan;
-        return $this->businesses()->count() < $plan->business_limit;
+
+        // Plan Enterprise : illimité
+        if ($plan->business_limit === -1) {
+            return true;
+        }
+
+        // Autres plans : vérifier la limite
+        return $currentCount < $plan->business_limit;
     }
 
     public function getRemainingBusinessSlots()
     {
+        $currentCount = $this->businesses()->count();
+
         if (!$this->hasActiveSubscription()) {
-            return max(0, 1 - $this->businesses()->count());
+            // Plan gratuit : 1 entreprise maximum
+            return max(0, 1 - $currentCount);
         }
 
         $plan = $this->currentSubscription->plan;
-        return max(0, $plan->business_limit - $this->businesses()->count());
+
+        // Plan Enterprise : illimité
+        if ($plan->business_limit === -1) {
+            return -1; // -1 signifie illimité
+        }
+
+        // Autres plans : calculer les emplacements restants
+        return max(0, $plan->business_limit - $currentCount);
+    }
+
+    public function getBusinessLimit()
+    {
+        if (!$this->hasActiveSubscription()) {
+            return 1; // Plan gratuit
+        }
+
+        $plan = $this->currentSubscription->plan;
+        return $plan->business_limit; // -1 pour illimité
     }
 
     public function hasPremiumFeatures()

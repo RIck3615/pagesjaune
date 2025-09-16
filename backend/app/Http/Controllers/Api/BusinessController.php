@@ -13,6 +13,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class BusinessController extends Controller
 {
@@ -187,7 +188,12 @@ class BusinessController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Limite d\'entreprises atteinte. Veuillez améliorer votre abonnement.',
-                'remaining_slots' => $user->getRemainingBusinessSlots()
+                'remaining_slots' => $user->getRemainingBusinessSlots(),
+                'requires_subscription' => true,
+                'current_limit' => $user->hasActiveSubscription()
+                    ? $user->currentSubscription->plan->business_limit
+                    : 1,
+                'current_count' => $user->businesses()->count()
             ], 403);
         }
 

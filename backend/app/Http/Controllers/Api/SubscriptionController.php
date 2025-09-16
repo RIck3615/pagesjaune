@@ -15,38 +15,62 @@ class SubscriptionController extends Controller
 {
     public function getPlans()
     {
-        $plans = SubscriptionPlan::active()
-            ->ordered()
-            ->get();
+        try {
+            $plans = SubscriptionPlan::active()
+                ->ordered()
+                ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $plans
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $plans
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la récupération des plans: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement des plans'
+            ], 500);
+        }
     }
 
     public function getCurrentSubscription()
     {
-        $user = Auth::user();
-        $subscription = $user->currentSubscription;
+        try {
+            $user = Auth::user();
 
-        if (!$subscription) {
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+
+            $subscription = $user->currentSubscription;
+
+            if (!$subscription) {
+                return response()->json([
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'Aucun abonnement actif'
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
-                'data' => null,
-                'message' => 'Aucun abonnement actif'
+                'data' => [
+                    'subscription' => $subscription->load('plan'),
+                    'is_active' => $subscription->isActive(),
+                    'days_remaining' => $subscription->daysRemaining(),
+                    'remaining_business_slots' => $user->getRemainingBusinessSlots()
+                ]
             ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la récupération de l\'abonnement: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement de l\'abonnement'
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'subscription' => $subscription->load('plan'),
-                'is_active' => $subscription->isActive(),
-                'days_remaining' => $subscription->daysRemaining(),
-                'remaining_business_slots' => $user->getRemainingBusinessSlots()
-            ]
-        ]);
     }
 
     public function subscribe(Request $request)
@@ -143,6 +167,7 @@ class SubscriptionController extends Controller
 
         } catch (\Exception $e) {
             DB::rollback();
+            \Log::error('Erreur lors de la création de l\'abonnement: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors de la création de l\'abonnement'
@@ -152,40 +177,56 @@ class SubscriptionController extends Controller
 
     public function cancelSubscription()
     {
-        $user = Auth::user();
-        $subscription = $user->currentSubscription;
+        try {
+            $user = Auth::user();
+            $subscription = $user->currentSubscription;
 
-        if (!$subscription || !$subscription->isActive()) {
+            if (!$subscription || !$subscription->isActive()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucun abonnement actif à annuler'
+                ], 400);
+            }
+
+            $subscription->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'auto_renew' => false,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Abonnement annulé avec succès'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de l\'annulation de l\'abonnement: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Aucun abonnement actif à annuler'
-            ], 400);
+                'message' => 'Erreur lors de l\'annulation de l\'abonnement'
+            ], 500);
         }
-
-        $subscription->update([
-            'status' => 'cancelled',
-            'cancelled_at' => now(),
-            'auto_renew' => false,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Abonnement annulé avec succès'
-        ]);
     }
 
     public function getPaymentHistory()
     {
-        $user = Auth::user();
-        $payments = $user->payments()
-            ->with('subscription.plan')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $user = Auth::user();
+            $payments = $user->payments()
+                ->with('subscription.plan')
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $payments
-        ]);
+            return response()->json([
+                'success' => true,
+                'data' => $payments
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur lors de la récupération de l\'historique des paiements: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement de l\'historique des paiements'
+            ], 500);
+        }
     }
 
     private function processPayment(Payment $payment, string $method)
@@ -233,7 +274,3 @@ class SubscriptionController extends Controller
         ];
     }
 }
-```
-
-```
-

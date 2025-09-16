@@ -14,12 +14,29 @@ import {
 import { businessService } from '../services/api';
 import { formatUtils } from '../utils/format';
 import { getImageUrl } from '../utils/images';
+import { useAuth } from '../hooks/useAuth';
+import { useSubscription } from '../hooks/useSubscription';
 
 const MyBusinesses = () => {
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const { user } = useAuth();
+  const { currentSubscription } = useSubscription();
+
+  const remainingSlots = user?.role === 'business' ? (
+    !user.hasActiveSubscription ? Math.max(0, 1 - (user.businesses?.length || 0)) :
+    currentSubscription?.subscription?.plan?.business_limit === -1 ? -1 :
+    Math.max(0, currentSubscription?.subscription?.plan?.business_limit - (user.businesses?.length || 0))
+  ) : 0;
+
+  const currentLimit = user?.role === 'business' ? (
+    !user.hasActiveSubscription ? 1 :
+    currentSubscription?.subscription?.plan?.business_limit === -1 ? 'Illimité' :
+    currentSubscription?.subscription?.plan?.business_limit
+  ) : 0;
 
   useEffect(() => {
     loadBusinesses();
@@ -105,6 +122,59 @@ const MyBusinesses = () => {
             Ajouter une entreprise
           </Link>
         </div>
+
+        {/* Barre de progression des limites */}
+        {user?.role === 'business' && (
+          <div className="p-4 mb-6 rounded-lg bg-gray-50">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Utilisation des entreprises
+              </span>
+              <span className="text-sm text-gray-500">
+                {user.businesses?.length || 0} / {currentLimit}
+              </span>
+            </div>
+            <div className="w-full h-2 bg-gray-200 rounded-full">
+              <div
+                className="h-2 transition-all duration-300 bg-blue-600 rounded-full"
+                style={{
+                  width: currentLimit === 'Illimité' ? '0%' : 
+                         `${Math.min(((user.businesses?.length || 0) / currentLimit) * 100, 100)}%`
+                }}
+              ></div>
+            </div>
+            {remainingSlots === 0 && currentLimit !== 'Illimité' && (
+              <p className="mt-2 text-sm text-red-600">
+                Limite atteinte. <Link to="/choose-plan" className="text-blue-600 hover:text-blue-800">Améliorez votre abonnement</Link> pour créer plus d'entreprises.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Informations d'abonnement */}
+        {user?.role === 'business' && (
+          <div className="p-4 mb-8 border border-blue-200 rounded-lg bg-blue-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-blue-900">
+                  Limite d'entreprises
+                </h3>
+                <p className="text-sm text-blue-700">
+                  {user.businesses?.length || 0} / {currentLimit} entreprises utilisées
+                  {remainingSlots === -1 ? ' (Illimité)' : ` (${remainingSlots} restantes)`}
+                </p>
+              </div>
+              {remainingSlots === 0 && (
+                <Link
+                  to="/choose-plan"
+                  className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Améliorer
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Liste des entreprises */}
         {businesses && businesses.length > 0 ? (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, createContext } from 'react'
 import { authService } from '../services/api'
+import { subscriptionService } from '../services/subscriptionService'
 import toast from 'react-hot-toast'
 
 const AuthContext = createContext()
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [isBusiness, setIsBusiness] = useState(false)
+  const [subscription, setSubscription] = useState(null)
 
   useEffect(() => {
     const initAuth = () => {
@@ -34,6 +36,9 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true)
           setIsAdmin(parsedUser.role === 'admin')
           setIsBusiness(parsedUser.role === 'business')
+          
+          // Charger l'abonnement si l'utilisateur est connecté
+          loadSubscription()
         } catch (parseError) {
           console.error('Erreur parsing user data:', parseError)
           localStorage.removeItem('auth_token')
@@ -42,18 +47,31 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(false)
           setIsAdmin(false)
           setIsBusiness(false)
+          setSubscription(null)
         }
       } else {
         setUser(null)
         setIsAuthenticated(false)
         setIsAdmin(false)
         setIsBusiness(false)
+        setSubscription(null)
       }
       setLoading(false)
     }
 
     initAuth()
   }, [])
+
+  const loadSubscription = async () => {
+    try {
+      const response = await subscriptionService.getCurrentSubscription()
+      if (response.success && response.data) {
+        setSubscription(response.data)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'abonnement:', error)
+    }
+  }
 
   const login = async (credentials) => {
     try {
@@ -81,6 +99,9 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true)
       setIsAdmin(userData.role === 'admin')
       setIsBusiness(userData.role === 'business')
+      
+      // Charger l'abonnement
+      await loadSubscription()
       
       toast.success('Connexion réussie !')
       return { success: true }
@@ -110,6 +131,12 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('auth_token', token)
       localStorage.setItem('auth_user', JSON.stringify(newUser))
       setUser(newUser)
+      setIsAuthenticated(true)
+      setIsAdmin(newUser.role === 'admin')
+      setIsBusiness(newUser.role === 'business')
+      
+      // Charger l'abonnement
+      await loadSubscription()
       
       toast.success('Inscription réussie !')
       return { success: true }
@@ -132,6 +159,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false)
       setIsAdmin(false)
       setIsBusiness(false)
+      setSubscription(null)
       toast.success('Déconnexion réussie !')
     }
   }
@@ -145,6 +173,8 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isAdmin,
     isBusiness,
+    subscription,
+    loadSubscription
   }
 
   return (
