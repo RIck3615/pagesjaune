@@ -17,6 +17,9 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'current_subscription_id',
+        'subscription_expires_at',
+        'has_premium_features',
     ];
 
     protected $hidden = [
@@ -27,6 +30,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'subscription_expires_at' => 'datetime',
+        'has_premium_features' => 'boolean',
     ];
 
     public function isAdmin(): bool
@@ -47,5 +52,50 @@ class User extends Authenticatable
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function currentSubscription()
+    {
+        return $this->belongsTo(UserSubscription::class, 'current_subscription_id');
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function hasActiveSubscription()
+    {
+        return $this->currentSubscription && $this->currentSubscription->isActive();
+    }
+
+    public function canCreateBusiness()
+    {
+        if (!$this->hasActiveSubscription()) {
+            return $this->businesses()->count() < 1; // Gratuit = 1 entreprise
+        }
+
+        $plan = $this->currentSubscription->plan;
+        return $this->businesses()->count() < $plan->business_limit;
+    }
+
+    public function getRemainingBusinessSlots()
+    {
+        if (!$this->hasActiveSubscription()) {
+            return max(0, 1 - $this->businesses()->count());
+        }
+
+        $plan = $this->currentSubscription->plan;
+        return max(0, $plan->business_limit - $this->businesses()->count());
+    }
+
+    public function hasPremiumFeatures()
+    {
+        return $this->has_premium_features && $this->hasActiveSubscription();
     }
 }

@@ -10,6 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class BusinessController extends Controller
 {
@@ -177,9 +180,15 @@ class BusinessController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $user = $this->checkAuth($request);
-        if (!$user) {
-            return response()->json(['error' => 'Non autorisé'], 401);
+        $user = Auth::user();
+
+        // Vérifier les limites d'abonnement
+        if (!$user->canCreateBusiness()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Limite d\'entreprises atteinte. Veuillez améliorer votre abonnement.',
+                'remaining_slots' => $user->getRemainingBusinessSlots()
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [

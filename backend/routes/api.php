@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\SubscriptionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +44,9 @@ Route::prefix('v1')->group(function () {
     Route::put('/reviews/{review}', [ReviewController::class, 'update'])->middleware('auth:sanctum');
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->middleware('auth:sanctum');
     Route::get('/my-reviews', [ReviewController::class, 'myReviews'])->middleware('auth:sanctum');
+
+    // Public subscription plans
+    Route::get('/subscription-plans', [SubscriptionController::class, 'getPlans']);
 
     // Admin routes (SANS middleware auth:sanctum)
     Route::prefix('admin')->group(function () {
@@ -86,6 +90,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::put('/reviews/{review}', [ReviewController::class, 'update']);
     Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
     Route::get('/my-reviews', [ReviewController::class, 'myReviews']);
+
+    // Subscription routes
+    Route::get('/my-subscription', [SubscriptionController::class, 'getCurrentSubscription']);
+    Route::post('/subscribe', [SubscriptionController::class, 'subscribe']);
+    Route::post('/cancel-subscription', [SubscriptionController::class, 'cancelSubscription']);
+    Route::get('/payment-history', [SubscriptionController::class, 'getPaymentHistory']);
 });
 
 // Admin routes
