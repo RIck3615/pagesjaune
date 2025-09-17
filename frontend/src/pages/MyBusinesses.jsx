@@ -12,7 +12,8 @@ import {
   MoreVertical,
   Crown,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Lock
 } from 'lucide-react';
 import { businessService } from '../services/api';
 import { formatUtils } from '../utils/format';
@@ -84,7 +85,8 @@ const MyBusinesses = () => {
         remainingSlots: 0,
         currentPlan: null,
         isEnterprise: false,
-        isHighestPlan: false
+        isHighestPlan: false,
+        canCreate: false
       };
     }
 
@@ -96,6 +98,7 @@ const MyBusinesses = () => {
       const remainingSlots = limitData.remaining_slots;
       const isEnterprise = currentPlan?.business_limit === -1;
       const isHighestPlan = currentPlan?.name === 'Enterprise';
+      const canCreate = limitData.can_create || false;
 
       return {
         currentLimit: currentLimit === -1 ? 'Illimité' : currentLimit,
@@ -103,7 +106,8 @@ const MyBusinesses = () => {
         remainingSlots: remainingSlots === -1 ? -1 : remainingSlots,
         currentPlan,
         isEnterprise,
-        isHighestPlan
+        isHighestPlan,
+        canCreate
       };
     }
 
@@ -113,12 +117,17 @@ const MyBusinesses = () => {
     let currentPlan = null;
     let isEnterprise = false;
     let isHighestPlan = false;
+    let canCreate = true; // Par défaut, permettre la création
 
     if (currentSubscription?.subscription?.plan) {
       currentPlan = currentSubscription.subscription.plan;
       currentLimit = currentPlan.business_limit === -1 ? 'Illimité' : currentPlan.business_limit;
       isEnterprise = currentPlan.business_limit === -1;
       isHighestPlan = currentPlan.name === 'Enterprise';
+      canCreate = isEnterprise || usedCount < currentLimit;
+    } else {
+      // Plan gratuit par défaut
+      canCreate = usedCount < 1;
     }
 
     const remainingSlots = isEnterprise ? -1 : Math.max(0, currentLimit - usedCount);
@@ -129,7 +138,8 @@ const MyBusinesses = () => {
       remainingSlots,
       currentPlan,
       isEnterprise,
-      isHighestPlan
+      isHighestPlan,
+      canCreate
     };
   };
 
@@ -163,6 +173,14 @@ const MyBusinesses = () => {
       console.error('Erreur lors du chargement des limites:', error);
       navigate('/subscription');
     }
+  };
+
+  const handleAddBusinessClick = () => {
+    if (!businessLimits.canCreate) {
+      handleUpgradeClick();
+      return;
+    }
+    navigate('/business/new');
   };
 
   if (loading) {
@@ -206,13 +224,33 @@ const MyBusinesses = () => {
               </p>
             </div>
             
-            <Link
-              to="/business/new"
-              className="inline-flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            {/* Bouton Ajouter une entreprise avec vérification des limites */}
+            <button
+              onClick={handleAddBusinessClick}
+              disabled={!businessLimits.canCreate}
+              className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+                businessLimits.canCreate
+                  ? 'text-white bg-blue-600 hover:bg-blue-700'
+                  : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+              }`}
+              title={
+                businessLimits.canCreate 
+                  ? 'Ajouter une nouvelle entreprise' 
+                  : 'Limite atteinte - Améliorez votre plan pour créer plus d\'entreprises'
+              }
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter une entreprise
-            </Link>
+              {businessLimits.canCreate ? (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter une entreprise
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Limite atteinte
+                </>
+              )}
+            </button>
           </div>
 
           {/* Barre de progression des limites avec vraies données */}
@@ -282,7 +320,7 @@ const MyBusinesses = () => {
               )}
 
               {/* Messages d'information améliorés */}
-              {businessLimits.remainingSlots === 0 && businessLimits.currentLimit !== 'Illimité' && (
+              {!businessLimits.canCreate && businessLimits.currentLimit !== 'Illimité' && (
                 <div className="p-4 border border-red-200 rounded-lg bg-red-50">
                   <div className="flex items-start space-x-3">
                     <AlertTriangle className="flex-shrink-0 w-5 h-5 text-red-500 mt-0.5" />
@@ -304,7 +342,7 @@ const MyBusinesses = () => {
                 </div>
               )}
 
-              {businessLimits.remainingSlots > 0 && businessLimits.currentLimit !== 'Illimité' && (
+              {businessLimits.canCreate && businessLimits.currentLimit !== 'Illimité' && (
                 <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
                   <div className="flex items-start space-x-3">
                     <CheckCircle className="flex-shrink-0 w-5 h-5 text-blue-500 mt-0.5" />
@@ -539,13 +577,32 @@ const MyBusinesses = () => {
               <p className="mb-6 text-gray-600">
                 Commencez par ajouter votre première entreprise pour augmenter votre visibilité
               </p>
-              <Link
-                to="/business/new"
-                className="inline-flex items-center px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              <button
+                onClick={handleAddBusinessClick}
+                disabled={!businessLimits.canCreate}
+                className={`inline-flex items-center px-6 py-3 rounded-lg transition-colors ${
+                  businessLimits.canCreate
+                    ? 'text-white bg-blue-600 hover:bg-blue-700'
+                    : 'text-gray-400 bg-gray-200 cursor-not-allowed'
+                }`}
+                title={
+                  businessLimits.canCreate 
+                    ? 'Ajouter votre première entreprise' 
+                    : 'Limite atteinte - Améliorez votre plan pour créer plus d\'entreprises'
+                }
               >
-                <Plus className="w-5 h-5 mr-2" />
-                Ajouter ma première entreprise
-              </Link>
+                {businessLimits.canCreate ? (
+                  <>
+                    <Plus className="w-5 h-5 mr-2" />
+                    Ajouter ma première entreprise
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5 mr-2" />
+                    Limite atteinte
+                  </>
+                )}
+              </button>
             </div>
           )}
 
