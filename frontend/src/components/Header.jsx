@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, Menu, X, User, LogOut, Settings } from 'lucide-react'
+import { Search, Menu, X, User, LogOut, Settings, Shield } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import SearchBar from './SearchBar'
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -19,12 +19,26 @@ const Header = () => {
 
   const isHomePage = location.pathname === '/'
 
+  // Déterminer le lien du tableau de bord selon le rôle
+  const dashboardLink = isAdmin ? '/admin/dashboard' : '/dashboard'
+  
+  // Déterminer le lien du logo selon le rôle
+  const logoLink = isAdmin ? '/admin/dashboard' : '/'
+
+  // Debug temporaire
+  console.log('Header Debug:', { 
+    isAdmin, 
+    userRole: user?.role, 
+    dashboardLink,
+    isAuthenticated 
+  })
+
   return (
     <header className="bg-white border-b shadow-sm">
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          {/* Logo - Redirige vers admin dashboard si admin, sinon vers accueil */}
+          <Link to={logoLink} className="flex items-center space-x-2">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-600">
               <span className="text-lg font-bold text-white">P</span>
             </div>
@@ -53,20 +67,20 @@ const Header = () => {
                 {isUserMenuOpen && (
                   <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white rounded-md shadow-lg">
                     <Link
-                      to="/dashboard"
+                      to={dashboardLink}
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
                       <Settings className="w-4 h-4 mr-2" />
-                      Tableau de bord
+                      {isAdmin ? 'Tableau de bord Admin' : 'Tableau de bord'}
                     </Link>
-                    {user?.role === 'admin' && (
+                    {isAdmin && (
                       <Link
                         to="/admin"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
-                        <Settings className="w-4 h-4 mr-2" />
+                        <Shield className="w-4 h-4 mr-2" />
                         Administration
                       </Link>
                     )}
@@ -128,18 +142,20 @@ const Header = () => {
                   <p className="text-sm text-gray-500">{user?.email}</p>
                 </div>
                 <Link
-                  to="/dashboard"
+                  to={dashboardLink}
                   className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Tableau de bord
+                  <Settings className="inline w-4 h-4 mr-2" />
+                  {isAdmin ? 'Tableau de bord Admin' : 'Tableau de bord'}
                 </Link>
-                {user?.role === 'admin' && (
+                {isAdmin && (
                   <Link
                     to="/admin"
                     className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
+                    <Shield className="inline w-4 h-4 mr-2" />
                     Administration
                   </Link>
                 )}

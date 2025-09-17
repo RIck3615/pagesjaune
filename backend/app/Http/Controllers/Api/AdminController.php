@@ -305,7 +305,7 @@ class AdminController extends Controller
             ->orderBy('created_at', 'desc');
 
         // Filter by status
-        if ($request->has('status')) {
+        if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
@@ -315,7 +315,7 @@ class AdminController extends Controller
         }
 
         // Search
-        if ($request->has('search')) {
+        if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('comment', 'like', "%{$search}%")

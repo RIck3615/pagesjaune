@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 
@@ -108,6 +108,7 @@ function App() {
                   } />
                   
                   {/* Admin routes */}
+                  <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
                   <Route path="/admin/dashboard" element={
                     <ProtectedRoute requireAdmin={true}>
                       <AdminDashboard />
@@ -138,32 +139,7 @@ function App() {
               </main>
               
               <Footer />
-              
-              {/* Toast notifications */}
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#363636',
-                    color: '#fff',
-                  },
-                  success: {
-                    duration: 3000,
-                    iconTheme: {
-                      primary: '#4ade80',
-                      secondary: '#fff',
-                    },
-                  },
-                  error: {
-                    duration: 5000,
-                    iconTheme: {
-                      primary: '#ef4444',
-                      secondary: '#fff',
-                    },
-                  },
-                }}
-              />
+              <Toaster position="top-right" />
             </div>
           </Router>
         </SubscriptionProvider>
