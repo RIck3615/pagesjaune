@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Edit, 
@@ -9,7 +9,10 @@ import {
   MapPin, 
   Phone,
   Building2,
-  MoreVertical
+  MoreVertical,
+  Crown,
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import { businessService } from '../services/api';
 import { formatUtils } from '../utils/format';
@@ -19,6 +22,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import PlanUpgradeModal from '../components/PlanUpgradeModal';
 
 const MyBusinesses = () => {
+  const navigate = useNavigate();
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,70 +31,109 @@ const MyBusinesses = () => {
   const [limitData, setLimitData] = useState(null);
 
   const { user } = useAuth();
-  const { currentSubscription } = useSubscription();
+  const { 
+    currentSubscription, 
+    refreshData 
+  } = useSubscription();
 
-  // Calculer les limites basées sur les données réelles
+  // Charger les données complètes de l'abonnement et des limites
+  useEffect(() => {
+    loadBusinessData();
+  }, []);
+
+  const loadBusinessData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Charger les entreprises
+      const businessesResponse = await businessService.getMyBusinesses();
+      setBusinesses(businessesResponse.data.data || []);
+      
+      // Charger les données d'abonnement et de limites
+      await Promise.all([
+        refreshData(), // Recharger les données d'abonnement
+        loadLimitData()
+      ]);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      setError('Erreur lors du chargement de vos données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadLimitData = async () => {
+    try {
+      const response = await businessService.checkLimits();
+      if (response.data.success) {
+        setLimitData(response.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des limites:', error);
+    }
+  };
+
+  // Calculer les limites basées sur les vraies données du backend
   const getBusinessLimits = () => {
     if (!user || user.role !== 'business') {
       return {
         currentLimit: 0,
         usedCount: 0,
         remainingSlots: 0,
-        currentPlan: null
+        currentPlan: null,
+        isEnterprise: false,
+        isHighestPlan: false
       };
     }
 
-    const usedCount = businesses.length; // Utiliser le nombre réel d'entreprises chargées
-    
-    // Déterminer la limite selon l'abonnement
-    let currentLimit;
+    // Utiliser les données du backend si disponibles
+    if (limitData) {
+      const usedCount = businesses.length;
+      const currentLimit = limitData.current_limit;
+      const currentPlan = limitData.current_plan;
+      const remainingSlots = limitData.remaining_slots;
+      const isEnterprise = currentPlan?.business_limit === -1;
+      const isHighestPlan = currentPlan?.name === 'Enterprise';
+
+      return {
+        currentLimit: currentLimit === -1 ? 'Illimité' : currentLimit,
+        usedCount,
+        remainingSlots: remainingSlots === -1 ? -1 : remainingSlots,
+        currentPlan,
+        isEnterprise,
+        isHighestPlan
+      };
+    }
+
+    // Fallback sur les données locales si pas de données du backend
+    const usedCount = businesses.length;
+    let currentLimit = 1; // Plan gratuit par défaut
     let currentPlan = null;
-    
-    if (!user.hasActiveSubscription || !currentSubscription?.subscription?.plan) {
-      // Plan gratuit par défaut
-      currentLimit = 1;
-    } else {
+    let isEnterprise = false;
+    let isHighestPlan = false;
+
+    if (currentSubscription?.subscription?.plan) {
       currentPlan = currentSubscription.subscription.plan;
       currentLimit = currentPlan.business_limit === -1 ? 'Illimité' : currentPlan.business_limit;
+      isEnterprise = currentPlan.business_limit === -1;
+      isHighestPlan = currentPlan.name === 'Enterprise';
     }
-    
-    // Calculer les emplacements restants
-    let remainingSlots;
-    if (currentLimit === 'Illimité') {
-      remainingSlots = -1; // Illimité
-    } else {
-      remainingSlots = Math.max(0, currentLimit - usedCount);
-    }
+
+    const remainingSlots = isEnterprise ? -1 : Math.max(0, currentLimit - usedCount);
 
     return {
       currentLimit,
       usedCount,
       remainingSlots,
-      currentPlan
+      currentPlan,
+      isEnterprise,
+      isHighestPlan
     };
   };
 
   const businessLimits = getBusinessLimits();
-
-  useEffect(() => {
-    loadBusinesses();
-  }, []);
-
-  const loadBusinesses = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await businessService.getMyBusinesses();
-      setBusinesses(response.data.data || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement des entreprises:', error);
-      setError('Erreur lors du chargement de vos entreprises');
-      setBusinesses([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDelete = async (businessId) => {
     if (!deleteConfirm || deleteConfirm !== businessId) {
@@ -102,6 +145,9 @@ const MyBusinesses = () => {
       await businessService.delete(businessId);
       setBusinesses(businesses.filter(b => b.id !== businessId));
       setDeleteConfirm(null);
+      
+      // Recharger les données de limites après suppression
+      await loadLimitData();
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
       alert('Erreur lors de la suppression de l\'entreprise');
@@ -110,11 +156,9 @@ const MyBusinesses = () => {
 
   const handleUpgradeClick = async () => {
     try {
-      const response = await businessService.checkLimits();
-      if (response.data.success) {
-        setLimitData(response.data);
-        setShowUpgradeModal(true);
-      }
+      // Recharger les données de limites pour avoir les dernières informations
+      await loadLimitData();
+      setShowUpgradeModal(true);
     } catch (error) {
       console.error('Erreur lors du chargement des limites:', error);
       navigate('/subscription');
@@ -139,7 +183,7 @@ const MyBusinesses = () => {
           <h1 className="mb-4 text-2xl font-bold text-gray-900">Erreur</h1>
           <p className="mb-6 text-gray-600">{error}</p>
           <button
-            onClick={loadBusinesses}
+            onClick={loadBusinessData}
             className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           >
             Réessayer
@@ -171,84 +215,137 @@ const MyBusinesses = () => {
             </Link>
           </div>
 
-          {/* Barre de progression des limites améliorée */}
+          {/* Barre de progression des limites avec vraies données */}
           {user?.role === 'business' && (
             <div className="p-6 mb-6 bg-white border border-gray-200 rounded-lg shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Limite d'entreprises
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Plan actuel : {businessLimits.currentPlan?.name || 'Plan Gratuit'}
-                  </p>
+                <div className="flex items-center space-x-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Limite d'entreprises
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-gray-600">
+                        Plan actuel : 
+                      </p>
+                      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                        businessLimits.isEnterprise 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : businessLimits.currentPlan?.price === 0 || !businessLimits.currentPlan
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {businessLimits.isEnterprise && <Crown className="w-3 h-3 mr-1" />}
+                        {businessLimits.currentPlan?.name || 'Plan Gratuit'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-gray-900">
                     {businessLimits.usedCount} / {businessLimits.currentLimit}
                   </div>
-                  <div className="text-sm text-gray-600">entreprises</div>
+                  <div className="text-sm text-gray-600">
+                    {businessLimits.currentLimit === 'Illimité' ? 'entreprises' : 'entreprises utilisées'}
+                  </div>
                 </div>
               </div>
               
               {/* Barre de progression */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    Utilisation
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {businessLimits.remainingSlots === -1 
-                      ? 'Illimité' 
-                      : `${businessLimits.remainingSlots} restante${businessLimits.remainingSlots > 1 ? 's' : ''}`
-                    }
-                  </span>
+              {businessLimits.currentLimit !== 'Illimité' && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Utilisation
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {businessLimits.remainingSlots === -1 
+                        ? 'Illimité' 
+                        : `${businessLimits.remainingSlots} restante${businessLimits.remainingSlots > 1 ? 's' : ''}`
+                      }
+                    </span>
+                  </div>
+                  <div className="w-full h-3 bg-gray-200 rounded-full">
+                    <div
+                      className="h-3 transition-all duration-300 rounded-full"
+                      style={{
+                        width: `${Math.min((businessLimits.usedCount / businessLimits.currentLimit) * 100, 100)}%`,
+                        backgroundColor: businessLimits.usedCount >= businessLimits.currentLimit 
+                          ? '#ef4444' // Rouge si limite atteinte
+                          : businessLimits.usedCount >= businessLimits.currentLimit * 0.8 
+                          ? '#f59e0b' // Orange si proche de la limite
+                          : '#2563eb' // Bleu normal
+                      }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="w-full h-3 bg-gray-200 rounded-full">
-                  <div
-                    className="h-3 transition-all duration-300 rounded-full"
-                    style={{
-                      width: businessLimits.currentLimit === 'Illimité' 
-                        ? '100%' 
-                        : `${Math.min((businessLimits.usedCount / businessLimits.currentLimit) * 100, 100)}%`,
-                      backgroundColor: businessLimits.usedCount >= businessLimits.currentLimit 
-                        ? '#ef4444' // Rouge si limite atteinte
-                        : businessLimits.usedCount >= businessLimits.currentLimit * 0.8 
-                        ? '#f59e0b' // Orange si proche de la limite
-                        : '#2563eb' // Bleu normal
-                    }}
-                  ></div>
-                </div>
-              </div>
+              )}
 
-              {/* Message d'information */}
+              {/* Messages d'information améliorés */}
               {businessLimits.remainingSlots === 0 && businessLimits.currentLimit !== 'Illimité' && (
-                <div className="p-3 border border-red-200 rounded-lg bg-red-50">
-                  <p className="text-sm text-red-800">
-                    <strong>Limite atteinte !</strong> Vous avez utilisé toutes vos entreprises. 
-                    <button
-                      onClick={handleUpgradeClick}
-                      className="ml-1 text-blue-600 underline hover:text-blue-800"
-                    >
-                      Améliorez votre plan
-                    </button> pour créer plus d'entreprises.
-                  </p>
+                <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="flex-shrink-0 w-5 h-5 text-red-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-800">
+                        Limite atteinte !
+                      </p>
+                      <p className="mt-1 text-sm text-red-700">
+                        Vous avez utilisé toutes vos entreprises. 
+                        <button
+                          onClick={handleUpgradeClick}
+                          className="ml-1 font-medium text-blue-600 underline hover:text-blue-800"
+                        >
+                          Améliorez votre plan
+                        </button> pour créer plus d'entreprises.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {businessLimits.remainingSlots > 0 && businessLimits.currentLimit !== 'Illimité' && (
-                <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
-                  <p className="text-sm text-blue-800">
-                    Vous pouvez encore créer <strong>{businessLimits.remainingSlots}</strong> entreprise{businessLimits.remainingSlots > 1 ? 's' : ''}.
-                  </p>
+                <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="flex-shrink-0 w-5 h-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">
+                        Espace disponible
+                      </p>
+                      <p className="mt-1 text-sm text-blue-700">
+                        Vous pouvez encore créer <strong>{businessLimits.remainingSlots}</strong> entreprise{businessLimits.remainingSlots > 1 ? 's' : ''}.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {businessLimits.currentLimit === 'Illimité' && (
-                <div className="p-3 border border-green-200 rounded-lg bg-green-50">
-                  <p className="text-sm text-green-800">
-                    <strong>Plan Enterprise</strong> - Vous pouvez créer un nombre illimité d'entreprises.
-                  </p>
+              {businessLimits.isEnterprise && (
+                <div className="p-4 border border-purple-200 rounded-lg bg-purple-50">
+                  <div className="flex items-start space-x-3">
+                    <Crown className="flex-shrink-0 w-5 h-5 text-purple-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-purple-800">
+                        Plan Enterprise - Accès illimité
+                      </p>
+                      <p className="mt-1 text-sm text-purple-700">
+                        Vous pouvez créer un nombre illimité d'entreprises. C'est le plan le plus élevé disponible.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bouton d'amélioration pour les plans non-Enterprise */}
+              {!businessLimits.isEnterprise && !businessLimits.isHighestPlan && (
+                <div className="mt-4">
+                  <button
+                    onClick={handleUpgradeClick}
+                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 transition-colors bg-blue-100 rounded-lg hover:bg-blue-200"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    Découvrir les plans supérieurs
+                  </button>
                 </div>
               )}
             </div>
