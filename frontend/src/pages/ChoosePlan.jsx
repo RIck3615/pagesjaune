@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, Star, Zap, Crown, Building2, BarChart3, MessageCircle, Headphones } from 'lucide-react'
+import { Check, Star, Zap, Crown, Building2, BarChart3, MessageCircle, Headphones, Clock } from 'lucide-react'
 import { useSubscription } from '../hooks/useSubscription'
 import { useAuth } from '../hooks/useAuth'
 import toast from 'react-hot-toast'
@@ -48,26 +48,24 @@ const ChoosePlan = () => {
             } 
           })
         } else {
-          console.log('❓ Redirection inconnue:', result.redirectTo)
-          // Fallback vers le dashboard
-          navigate('/dashboard')
+          // Redirection par défaut
+          navigate(result.redirectTo || '/dashboard')
         }
-      } else {
-        console.log('❌ Échec de la sélection du plan:', result)
-        toast.error(result.message || 'Erreur lors de la sélection du plan')
       }
     } catch (error) {
       console.error('❌ Erreur lors de la sélection du plan:', error)
-      // Le toast d'erreur est déjà géré dans selectPlan
+      // L'erreur est déjà gérée dans selectPlan
     } finally {
       setSubscribing(false)
     }
   }
 
-  // Fonction pour détecter si un plan est gratuit
   const isFreePlan = (plan) => {
-    return plan.price === 0 || plan.price === '0' || plan.price === 0.00 || plan.slug === 'free'
+    return plan.price === 0 || plan.price === null || plan.slug === 'free'
   }
+
+  // Filtrer pour ne montrer que le plan gratuit
+  const availablePlans = plans.filter(plan => isFreePlan(plan))
 
   const getPlanIcon = (slug) => {
     switch (slug) {
@@ -117,197 +115,276 @@ const ChoosePlan = () => {
           </h1>
           <p className="max-w-3xl mx-auto text-xl text-gray-600">
             {isAuthenticated ? (
-              <>Bienvenue {user?.name} ! Sélectionnez le plan qui correspond le mieux à vos besoins pour commencer à gérer vos entreprises.</>
+              <>Bienvenue {user?.name} ! Commencez gratuitement avec notre plan de base.</>
             ) : (
-              <>Sélectionnez le plan qui correspond le mieux à vos besoins. Vous devrez vous connecter pour finaliser votre abonnement.</>
+              <>Commencez gratuitement avec notre plan de base. Vous devrez vous connecter pour finaliser votre abonnement.</>
             )}
           </p>
+          
+          {/* Message temporaire pour les plans payants */}
+          <div className="max-w-2xl p-4 mx-auto mt-6 border border-blue-200 rounded-lg bg-blue-50">
+            <div className="flex items-center justify-center space-x-2 text-blue-800">
+              <Clock className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                Les plans payants (Premium, Professional, Enterprise) seront bientôt disponibles !
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 gap-8 mb-12 md:grid-cols-2 lg:grid-cols-4">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
-                selectedPlan?.id === plan.id
-                  ? 'border-blue-500 ring-2 ring-blue-200'
-                  : 'border-gray-200 hover:border-gray-300'
-              } ${plan.is_popular ? 'ring-2 ring-yellow-400' : ''}`}
-            >
-              {/* Badge populaire */}
-              {plan.is_popular && (
+        {/* Plans Grid - Centré pour un seul plan */}
+        <div className="flex justify-center mb-12">
+          <div className="grid max-w-md grid-cols-1 gap-8 md:grid-cols-1 lg:grid-cols-1">
+            {availablePlans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`relative bg-white rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
+                  selectedPlan?.id === plan.id
+                    ? 'border-blue-500 ring-2 ring-blue-200'
+                    : 'border-gray-200 hover:border-gray-300'
+                } ${plan.is_popular ? 'ring-2 ring-yellow-400' : ''}`}
+              >
+                {/* Badge gratuit */}
+                {isFreePlan(plan) && (
+                  <div className="absolute transform -translate-x-1/2 -top-4 left-1/2">
+                    <span className="px-4 py-1 text-sm font-semibold text-green-900 bg-green-400 rounded-full">
+                      Gratuit
+                    </span>
+                  </div>
+                )}
+
+                <div className="p-8">
+                  {/* Icône et nom */}
+                  <div className="mb-6 text-center">
+                    <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r ${getPlanColor(plan.slug)} text-white mb-4`}>
+                      {getPlanIcon(plan.slug)}
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
+                    <p className="mt-2 text-gray-600">{plan.description}</p>
+                  </div>
+
+                  {/* Prix */}
+                  <div className="mb-6 text-center">
+                    <div className="flex items-baseline justify-center">
+                      {isFreePlan(plan) ? (
+                        <span className="text-5xl font-bold text-green-600">Gratuit</span>
+                      ) : (
+                        <>
+                          <span className="text-5xl font-bold text-gray-900">
+                            ${plan.price}
+                          </span>
+                          <span className="ml-2 text-gray-600">
+                            /{plan.duration_days === 365 ? 'an' : 'mois'}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Fonctionnalités */}
+                  <div className="mb-8">
+                    <ul className="space-y-4">
+                      {plan.features?.map((feature, index) => (
+                        <li key={index} className="flex items-center">
+                          <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                          <span className="text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Bouton de sélection */}
+                  <button
+                    onClick={() => setSelectedPlan(plan)}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
+                      selectedPlan?.id === plan.id
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {selectedPlan?.id === plan.id ? 'Sélectionné' : 'Sélectionner ce plan'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Plans payants désactivés - Section informative */}
+        <div className="mb-12">
+          <h2 className="mb-8 text-2xl font-bold text-center text-gray-900">
+            Plans payants bientôt disponibles
+          </h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {/* Plan Starter désactivé */}
+            <div className="relative bg-gray-100 border-2 border-gray-200 shadow-lg rounded-2xl opacity-60">
+              <div className="absolute inset-0 bg-gray-900 bg-opacity-20 rounded-2xl"></div>
+              <div className="relative p-8">
+                <div className="mb-6 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 mb-4 text-white rounded-full bg-gradient-to-r from-blue-500 to-blue-600">
+                    <Zap className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Starter</h3>
+                  <p className="mt-2 text-gray-600">Pour les petites entreprises</p>
+                </div>
+                <div className="mb-6 text-center">
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-5xl font-bold text-gray-900">$19</span>
+                    <span className="ml-2 text-gray-600">/mois</span>
+                  </div>
+                </div>
+                <div className="mb-8">
+                  <ul className="space-y-4">
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">5 entreprises</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Statistiques de base</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Support email</span>
+                    </li>
+                  </ul>
+                </div>
+                <button
+                  disabled
+                  className="w-full px-6 py-3 font-semibold text-gray-500 bg-gray-300 rounded-lg cursor-not-allowed"
+                >
+                  Bientôt disponible
+                </button>
+              </div>
+            </div>
+
+            {/* Plan Professional désactivé */}
+            <div className="relative bg-gray-100 border-2 border-gray-200 shadow-lg rounded-2xl opacity-60">
+              <div className="absolute inset-0 bg-gray-900 bg-opacity-20 rounded-2xl"></div>
+              <div className="relative p-8">
                 <div className="absolute transform -translate-x-1/2 -top-4 left-1/2">
                   <span className="px-4 py-1 text-sm font-semibold text-yellow-900 bg-yellow-400 rounded-full">
                     Populaire
                   </span>
                 </div>
-              )}
-
-              {/* Badge gratuit */}
-              {isFreePlan(plan) && (
-                <div className="absolute transform -translate-x-1/2 -top-4 left-1/2">
-                  <span className="px-4 py-1 text-sm font-semibold text-green-900 bg-green-400 rounded-full">
-                    Gratuit
-                  </span>
-                </div>
-              )}
-
-              <div className="p-8">
-                {/* Icône et nom */}
                 <div className="mb-6 text-center">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-r ${getPlanColor(plan.slug)} text-white mb-4`}>
-                    {getPlanIcon(plan.slug)}
+                  <div className="inline-flex items-center justify-center w-16 h-16 mb-4 text-white rounded-full bg-gradient-to-r from-purple-500 to-purple-600">
+                    <Star className="w-8 h-8" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
-                  <p className="mt-2 text-gray-600">{plan.description}</p>
+                  <h3 className="text-2xl font-bold text-gray-900">Professional</h3>
+                  <p className="mt-2 text-gray-600">Pour les entreprises en croissance</p>
                 </div>
-
-                {/* Prix */}
                 <div className="mb-6 text-center">
                   <div className="flex items-baseline justify-center">
-                    {isFreePlan(plan) ? (
-                      <span className="text-5xl font-bold text-green-600">Gratuit</span>
-                    ) : (
-                      <>
-                        <span className="text-5xl font-bold text-gray-900">
-                          ${plan.price}
-                        </span>
-                        <span className="ml-2 text-gray-600">
-                          /{plan.duration_days === 365 ? 'an' : 'mois'}
-                        </span>
-                      </>
-                    )}
+                    <span className="text-5xl font-bold text-gray-900">$49</span>
+                    <span className="ml-2 text-gray-600">/mois</span>
                   </div>
                 </div>
-
-                {/* Fonctionnalités */}
-                <div className="mb-8 space-y-4">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-center">
+                <div className="mb-8">
+                  <ul className="space-y-4">
+                    <li className="flex items-center">
                       <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
-                      <span className="text-gray-700">{feature}</span>
-                    </div>
-                  ))}
+                      <span className="text-gray-700">25 entreprises</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Statistiques avancées</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Support prioritaire</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">API d'intégration</span>
+                    </li>
+                  </ul>
                 </div>
-
-                {/* Bouton de sélection */}
                 <button
-                  onClick={() => setSelectedPlan(plan)}
-                  className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 ${
-                    selectedPlan?.id === plan.id
-                      ? 'bg-blue-600 text-white'
-                      : isFreePlan(plan)
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
+                  disabled
+                  className="w-full px-6 py-3 font-semibold text-gray-500 bg-gray-300 rounded-lg cursor-not-allowed"
                 >
-                  {selectedPlan?.id === plan.id ? 'Sélectionné' : 'Sélectionner'}
+                  Bientôt disponible
                 </button>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Méthode de paiement - Seulement pour les plans payants */}
-        {selectedPlan && !isFreePlan(selectedPlan) && isAuthenticated && (
-          <div className="max-w-md mx-auto mb-8">
-            <h3 className="mb-4 text-lg font-semibold text-center text-gray-900">
-              Méthode de paiement
-            </h3>
-            <div className="grid grid-cols-3 gap-4">
-              {[
-                { id: 'stripe', name: 'Stripe', icon: '💳' },
-                { id: 'paypal', name: 'PayPal', icon: '🅿️' },
-                { id: 'mobile_money', name: 'Mobile Money', icon: '💰' }
-              ].map((method) => (
+            {/* Plan Enterprise désactivé */}
+            <div className="relative bg-gray-100 border-2 border-gray-200 shadow-lg rounded-2xl opacity-60">
+              <div className="absolute inset-0 bg-gray-900 bg-opacity-20 rounded-2xl"></div>
+              <div className="relative p-8">
+                <div className="mb-6 text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 mb-4 text-white rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600">
+                    <Crown className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Enterprise</h3>
+                  <p className="mt-2 text-gray-600">Pour les grandes entreprises</p>
+                </div>
+                <div className="mb-6 text-center">
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-5xl font-bold text-gray-900">$99</span>
+                    <span className="ml-2 text-gray-600">/mois</span>
+                  </div>
+                </div>
+                <div className="mb-8">
+                  <ul className="space-y-4">
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Entreprises illimitées</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Analytics personnalisées</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Support 24/7</span>
+                    </li>
+                    <li className="flex items-center">
+                      <Check className="flex-shrink-0 w-5 h-5 mr-3 text-green-500" />
+                      <span className="text-gray-700">Intégration personnalisée</span>
+                    </li>
+                  </ul>
+                </div>
                 <button
-                  key={method.id}
-                  onClick={() => setPaymentMethod(method.id)}
-                  className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                    paymentMethod === method.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  disabled
+                  className="w-full px-6 py-3 font-semibold text-gray-500 bg-gray-300 rounded-lg cursor-not-allowed"
                 >
-                  <div className="mb-2 text-2xl">{method.icon}</div>
-                  <div className="text-sm font-medium">{method.name}</div>
+                  Bientôt disponible
                 </button>
-              ))}
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Bouton de confirmation */}
+        {/* Actions */}
         {selectedPlan && (
           <div className="text-center">
             <button
               onClick={handleSubscribe}
               disabled={subscribing}
-              className={`px-8 py-4 text-lg font-semibold text-white transition-all duration-200 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
-                isFreePlan(selectedPlan) ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className="inline-flex items-center px-8 py-4 text-lg font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {subscribing ? (
-                <div className="flex items-center">
+                <>
                   <div className="w-5 h-5 mr-2 border-b-2 border-white rounded-full animate-spin"></div>
-                  Traitement...
-                </div>
-              ) : !isAuthenticated ? (
-                'Se connecter pour s\'abonner'
-              ) : isFreePlan(selectedPlan) ? (
-                `Activer le plan ${selectedPlan.name} gratuitement`
+                  Traitement en cours...
+                </>
               ) : (
-                `Confirmer l'abonnement ${selectedPlan.name}`
+                <>
+                  {isFreePlan(selectedPlan) ? 'Commencer gratuitement' : 'Choisir ce plan'}
+                  <Check className="w-5 h-5 ml-2" />
+                </>
               )}
             </button>
-          </div>
-        )}
-
-        {/* Message pour le plan gratuit */}
-        {selectedPlan && isFreePlan(selectedPlan) && (
-          <div className="max-w-md p-4 mx-auto mt-4 text-center border border-green-200 rounded-lg bg-green-50">
-            <p className="text-sm text-green-800">
-              ✅ Le plan gratuit sera activé immédiatement et vous serez redirigé vers votre tableau de bord.
+            <p className="mt-4 text-sm text-gray-600">
+              {isFreePlan(selectedPlan) 
+                ? 'Aucune carte de crédit requise. Commencez immédiatement !'
+                : 'Vous serez redirigé vers la page de paiement sécurisée.'
+              }
             </p>
           </div>
         )}
-
-        {/* Informations supplémentaires */}
-        <div className="mt-16 text-center">
-          <h3 className="mb-6 text-2xl font-bold text-gray-900">
-            Pourquoi choisir nos plans ?
-          </h3>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-4 bg-blue-100 rounded-full">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
-              </div>
-              <h4 className="mb-2 text-lg font-semibold text-gray-900">Analytics avancés</h4>
-              <p className="text-gray-600">
-                Suivez les performances de vos entreprises avec des statistiques détaillées
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-4 bg-green-100 rounded-full">
-                <MessageCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <h4 className="mb-2 text-lg font-semibold text-gray-900">Chat illimité</h4>
-              <p className="text-gray-600">
-                Communiquez sans limite avec vos clients via notre système de chat
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 mb-4 bg-purple-100 rounded-full">
-                <Headphones className="w-6 h-6 text-purple-600" />
-              </div>
-              <h4 className="mb-2 text-lg font-semibold text-gray-900">Support prioritaire</h4>
-              <p className="text-gray-600">
-                Bénéficiez d'un support client prioritaire selon votre plan
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
