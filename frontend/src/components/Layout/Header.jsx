@@ -128,6 +128,17 @@ const Header = ({ onSearch }) => {
               Carte
             </Link>
 
+            {/* Lien Dashboard direct - Visible pour tous les utilisateurs connectés */}
+            {isAuthenticated && (
+              <Link
+                to="/dashboard"
+                className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:text-gray-900 hover:bg-gray-50"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Dashboard
+              </Link>
+            )}
+
             {isAuthenticated ? (
               <div className="relative" ref={userMenuRef}>
                 <button
@@ -146,25 +157,13 @@ const Header = ({ onSearch }) => {
                 {isUserMenuOpen && (
                   <div className="absolute right-0 z-50 w-48 py-1 mt-2 bg-white border border-gray-200 rounded-md shadow-lg">
                     <Link
-                      to={getDashboardLink()}
+                      to="/my-businesses"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
-                      {getDashboardIcon()}
-                      {getDashboardText()}
+                      <Building2 className="w-4 h-4 mr-2" />
+                      Mes entreprises
                     </Link>
-                    
-                    {/* Lien spécifique pour les admins vers la gestion des entreprises */}
-                    {isAdmin && (
-                      <Link
-                        to="/admin/businesses"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Building2 className="w-4 h-4 mr-2" />
-                        Gérer les entreprises
-                      </Link>
-                    )}
 
                     <Link
                       to="/subscription"
@@ -255,26 +254,26 @@ const Header = ({ onSearch }) => {
                     </span>
                   )}
                 </div>
+
+                {/* Lien Dashboard Mobile */}
                 <Link
-                  to={getDashboardLink()}
+                  to="/dashboard"
                   className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {getDashboardIcon()}
-                  {getDashboardText()}
+                  <Settings className="w-4 h-4 mr-2" />
+                  Dashboard
                 </Link>
-                
-                {/* Lien spécifique pour les admins vers la gestion des entreprises */}
-                {isAdmin && (
-                  <Link
-                    to="/admin/businesses"
-                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Building2 className="w-4 h-4 mr-2" />
-                    Gérer les entreprises
-                  </Link>
-                )}
+
+                {/* Lien Mes entreprises Mobile */}
+                <Link
+                  to="/my-businesses"
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Building2 className="w-4 h-4 mr-2" />
+                  Mes entreprises
+                </Link>
 
                 <Link
                   to="/subscription"
