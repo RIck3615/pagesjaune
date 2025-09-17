@@ -115,6 +115,8 @@ export const SubscriptionProvider = ({ children }) => {
     try {
       setLoading(true)
       
+      console.log(' Sélection du plan:', planId, 'Méthode de paiement:', paymentMethod)
+      
       // Trouver le plan sélectionné
       const selectedPlan = plans.find(plan => plan.id === planId)
       
@@ -122,32 +124,50 @@ export const SubscriptionProvider = ({ children }) => {
         throw new Error('Plan non trouvé')
       }
       
-      // Si c'est le plan gratuit (prix = 0)
-      if (selectedPlan.price === 0) {
+      console.log('📋 Plan trouvé:', selectedPlan.name, 'Prix:', selectedPlan.price, 'Slug:', selectedPlan.slug)
+      
+      // Détecter si c'est un plan gratuit (plusieurs conditions pour être sûr)
+      const isFreePlan = selectedPlan.price === 0 || 
+                        selectedPlan.price === '0' || 
+                        selectedPlan.price === 0.00 || 
+                        selectedPlan.slug === 'free' ||
+                        selectedPlan.name.toLowerCase().includes('gratuit')
+      
+      console.log(' Plan gratuit détecté:', isFreePlan)
+      
+      // Si c'est le plan gratuit
+      if (isFreePlan) {
+        console.log('✅ Plan gratuit détecté, activation directe...')
+        
         // Activer directement le plan gratuit
         const response = await subscriptionService.subscribe(planId, 'free')
-        setCurrentSubscription(response.data)
+        console.log('🎉 Plan gratuit activé:', response.data)
         
-        // Ne pas afficher le toast ici, laisser le composant parent le gérer
+        setCurrentSubscription(response.data)
         
         // Rediriger vers le dashboard
         return { 
           success: true, 
           redirectTo: '/dashboard',
-          message: 'Plan gratuit activé avec succès !'
+          message: 'Plan gratuit activé avec succès ! Vous allez être redirigé vers votre tableau de bord.',
+          isFreePlan: true,
+          plan: selectedPlan
         }
       } else {
+        console.log('💰 Plan payant détecté, redirection vers paiement...')
+        
         // Pour les plans payants, rediriger vers l'écran de paiement
         return { 
           success: true, 
           redirectTo: '/payment',
           planId: planId,
           plan: selectedPlan,
-          message: 'Redirection vers l\'écran de paiement'
+          message: 'Redirection vers l\'écran de paiement',
+          isFreePlan: false
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la sélection du plan:', error)
+      console.error('❌ Erreur lors de la sélection du plan:', error)
       const errorMessage = error.response?.data?.message || 'Erreur lors de la sélection du plan'
       toast.error(errorMessage)
       throw error

@@ -7,7 +7,7 @@ import toast from 'react-hot-toast'
 
 const ChoosePlan = () => {
   const navigate = useNavigate()
-  const { plans, loading, selectPlan } = useSubscription() // Utiliser selectPlan au lieu de subscribe
+  const { plans, loading, selectPlan } = useSubscription()
   const { user, isAuthenticated } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('stripe')
@@ -24,16 +24,22 @@ const ChoosePlan = () => {
 
     setSubscribing(true)
     try {
+      console.log(' Début de la sélection du plan:', selectedPlan.name, 'Prix:', selectedPlan.price)
+      
       const result = await selectPlan(selectedPlan.id, paymentMethod)
+      
+      console.log('📋 Résultat de selectPlan:', result)
       
       if (result.success) {
         toast.success(result.message)
         
         // Rediriger selon le type de plan
         if (result.redirectTo === '/dashboard') {
+          console.log('✅ Redirection vers le dashboard')
           // Plan gratuit - redirection directe
           navigate('/dashboard')
         } else if (result.redirectTo === '/payment') {
+          console.log('💰 Redirection vers le paiement')
           // Plan payant - redirection vers paiement avec les données du plan
           navigate('/payment', { 
             state: { 
@@ -41,14 +47,26 @@ const ChoosePlan = () => {
               planId: result.planId 
             } 
           })
+        } else {
+          console.log('❓ Redirection inconnue:', result.redirectTo)
+          // Fallback vers le dashboard
+          navigate('/dashboard')
         }
+      } else {
+        console.log('❌ Échec de la sélection du plan:', result)
+        toast.error(result.message || 'Erreur lors de la sélection du plan')
       }
     } catch (error) {
-      console.error('Erreur lors de la sélection du plan:', error)
+      console.error('❌ Erreur lors de la sélection du plan:', error)
       // Le toast d'erreur est déjà géré dans selectPlan
     } finally {
       setSubscribing(false)
     }
+  }
+
+  // Fonction pour détecter si un plan est gratuit
+  const isFreePlan = (plan) => {
+    return plan.price === 0 || plan.price === '0' || plan.price === 0.00 || plan.slug === 'free'
   }
 
   const getPlanIcon = (slug) => {
@@ -126,6 +144,15 @@ const ChoosePlan = () => {
                 </div>
               )}
 
+              {/* Badge gratuit */}
+              {isFreePlan(plan) && (
+                <div className="absolute transform -translate-x-1/2 -top-4 left-1/2">
+                  <span className="px-4 py-1 text-sm font-semibold text-green-900 bg-green-400 rounded-full">
+                    Gratuit
+                  </span>
+                </div>
+              )}
+
               <div className="p-8">
                 {/* Icône et nom */}
                 <div className="mb-6 text-center">
@@ -139,12 +166,18 @@ const ChoosePlan = () => {
                 {/* Prix */}
                 <div className="mb-6 text-center">
                   <div className="flex items-baseline justify-center">
-                    <span className="text-5xl font-bold text-gray-900">
-                      ${plan.price}
-                    </span>
-                    <span className="ml-2 text-gray-600">
-                      /{plan.duration_days === 365 ? 'an' : 'mois'}
-                    </span>
+                    {isFreePlan(plan) ? (
+                      <span className="text-5xl font-bold text-green-600">Gratuit</span>
+                    ) : (
+                      <>
+                        <span className="text-5xl font-bold text-gray-900">
+                          ${plan.price}
+                        </span>
+                        <span className="ml-2 text-gray-600">
+                          /{plan.duration_days === 365 ? 'an' : 'mois'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -164,8 +197,8 @@ const ChoosePlan = () => {
                   className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-200 ${
                     selectedPlan?.id === plan.id
                       ? 'bg-blue-600 text-white'
-                      : plan.slug === 'free'
-                      ? 'bg-gray-600 text-white hover:bg-gray-700'
+                      : isFreePlan(plan)
+                      ? 'bg-green-600 text-white hover:bg-green-700'
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                   }`}
                 >
@@ -176,8 +209,8 @@ const ChoosePlan = () => {
           ))}
         </div>
 
-        {/* Méthode de paiement */}
-        {selectedPlan && selectedPlan.slug !== 'free' && isAuthenticated && (
+        {/* Méthode de paiement - Seulement pour les plans payants */}
+        {selectedPlan && !isFreePlan(selectedPlan) && isAuthenticated && (
           <div className="max-w-md mx-auto mb-8">
             <h3 className="mb-4 text-lg font-semibold text-center text-gray-900">
               Méthode de paiement
@@ -211,7 +244,9 @@ const ChoosePlan = () => {
             <button
               onClick={handleSubscribe}
               disabled={subscribing}
-              className="px-8 py-4 text-lg font-semibold text-white transition-all duration-200 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`px-8 py-4 text-lg font-semibold text-white transition-all duration-200 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed ${
+                isFreePlan(selectedPlan) ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               {subscribing ? (
                 <div className="flex items-center">
@@ -220,10 +255,21 @@ const ChoosePlan = () => {
                 </div>
               ) : !isAuthenticated ? (
                 'Se connecter pour s\'abonner'
+              ) : isFreePlan(selectedPlan) ? (
+                `Activer le plan ${selectedPlan.name} gratuitement`
               ) : (
                 `Confirmer l'abonnement ${selectedPlan.name}`
               )}
             </button>
+          </div>
+        )}
+
+        {/* Message pour le plan gratuit */}
+        {selectedPlan && isFreePlan(selectedPlan) && (
+          <div className="max-w-md p-4 mx-auto mt-4 text-center border border-green-200 rounded-lg bg-green-50">
+            <p className="text-sm text-green-800">
+              ✅ Le plan gratuit sera activé immédiatement et vous serez redirigé vers votre tableau de bord.
+            </p>
           </div>
         )}
 
