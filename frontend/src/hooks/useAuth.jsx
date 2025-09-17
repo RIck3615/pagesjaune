@@ -141,9 +141,16 @@ export const AuthProvider = ({ children }) => {
       toast.success('Inscription réussie !')
       return { success: true }
     } catch (error) {
-      const message = error.response?.data?.message || error.message || 'Erreur d\'inscription'
-      toast.error(message)
-      return { success: false, error: message }
+      // Ne pas afficher de toast ici, laisser le composant gérer les erreurs
+      console.error('Erreur d\'inscription:', error)
+      
+      // Retourner l'erreur complète pour que le composant puisse la traiter
+      return { 
+        success: false, 
+        error: error.response?.data?.message || error.message || 'Erreur d\'inscription',
+        validationErrors: error.response?.data?.errors || null,
+        status: error.response?.status
+      }
     }
   }
 

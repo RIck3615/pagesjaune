@@ -17,21 +17,33 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    
+    // Effacer l'erreur du champ quand l'utilisateur tape
+    if (fieldErrors[e.target.name]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [e.target.name]: ''
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setFieldErrors({});
 
     if (formData.password !== formData.password_confirmation) {
-      setError('Les mots de passe ne correspondent pas');
+      setFieldErrors({
+        password_confirmation: 'Les mots de passe ne correspondent pas'
+      });
       setLoading(false);
       return;
     }
@@ -47,7 +59,23 @@ const Register = () => {
           navigate('/dashboard');
         }
       } else {
-        setError(result.error || 'Erreur lors de l\'inscription');
+        // Gérer les erreurs de validation du backend
+        if (result.status === 422 && result.validationErrors) {
+          const formattedErrors = {};
+          
+          // Formater les erreurs pour l'affichage
+          Object.keys(result.validationErrors).forEach(field => {
+            if (Array.isArray(result.validationErrors[field])) {
+              formattedErrors[field] = result.validationErrors[field][0]; // Prendre le premier message
+            } else {
+              formattedErrors[field] = result.validationErrors[field];
+            }
+          });
+          
+          setFieldErrors(formattedErrors);
+        } else {
+          setError(result.error || 'Erreur lors de l\'inscription');
+        }
       }
     } catch (error) {
       console.error('Erreur d\'inscription:', error);
@@ -55,6 +83,14 @@ const Register = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getFieldError = (fieldName) => {
+    return fieldErrors[fieldName] || '';
+  };
+
+  const hasFieldError = (fieldName) => {
+    return !!fieldErrors[fieldName];
   };
 
   return (
@@ -102,12 +138,19 @@ const Register = () => {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#009ee5' }}
+                  className={`block w-full px-3 py-2 pl-10 placeholder-gray-400 border rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent ${
+                    hasFieldError('name') 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300'
+                  }`}
+                  style={{ '--tw-ring-color': hasFieldError('name') ? '#ef4444' : '#009ee5' }}
                   placeholder="Votre nom complet"
                 />
                 <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
+              {hasFieldError('name') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('name')}</p>
+              )}
             </div>
 
             <div>
@@ -123,12 +166,19 @@ const Register = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 pl-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#009ee5' }}
+                  className={`block w-full px-3 py-2 pl-10 placeholder-gray-400 border rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent ${
+                    hasFieldError('email') 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300'
+                  }`}
+                  style={{ '--tw-ring-color': hasFieldError('email') ? '#ef4444' : '#009ee5' }}
                   placeholder="votre@email.com"
                 />
                 <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
+              {hasFieldError('email') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
+              )}
             </div>
 
             <div>
@@ -141,13 +191,20 @@ const Register = () => {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#009ee5' }}
+                  className={`block w-full px-3 py-2 border rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent ${
+                    hasFieldError('role') 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300'
+                  }`}
+                  style={{ '--tw-ring-color': hasFieldError('role') ? '#ef4444' : '#009ee5' }}
                 >
                   <option value="user">Utilisateur</option>
                   <option value="business">Entreprise</option>
                 </select>
               </div>
+              {hasFieldError('role') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('role')}</p>
+              )}
               {formData.role === 'business' && (
                 <p className="mt-2 text-sm text-blue-600">
                   💡 En tant qu'entreprise, vous pourrez choisir un plan d'abonnement après l'inscription
@@ -168,8 +225,12 @@ const Register = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#009ee5' }}
+                  className={`block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent ${
+                    hasFieldError('password') 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300'
+                  }`}
+                  style={{ '--tw-ring-color': hasFieldError('password') ? '#ef4444' : '#009ee5' }}
                   placeholder="Votre mot de passe"
                 />
                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -185,6 +246,9 @@ const Register = () => {
                   )}
                 </button>
               </div>
+              {hasFieldError('password') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('password')}</p>
+              )}
             </div>
 
             <div>
@@ -200,8 +264,12 @@ const Register = () => {
                   required
                   value={formData.password_confirmation}
                   onChange={handleChange}
-                  className="block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ '--tw-ring-color': '#009ee5' }}
+                  className={`block w-full px-3 py-2 pl-10 pr-10 placeholder-gray-400 border rounded-lg appearance-none focus:outline-none focus:ring-2 focus:border-transparent ${
+                    hasFieldError('password_confirmation') 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-300'
+                  }`}
+                  style={{ '--tw-ring-color': hasFieldError('password_confirmation') ? '#ef4444' : '#009ee5' }}
                   placeholder="Confirmer votre mot de passe"
                 />
                 <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -217,6 +285,9 @@ const Register = () => {
                   )}
                 </button>
               </div>
+              {hasFieldError('password_confirmation') && (
+                <p className="mt-1 text-sm text-red-600">{getFieldError('password_confirmation')}</p>
+              )}
             </div>
 
             <div>
