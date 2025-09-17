@@ -94,7 +94,10 @@ export const businessService = {
     };
 
     return await businessService.searchByProximity(params);
-  }
+  },
+
+  // Nouvelle méthode pour vérifier les limites
+  checkLimits: () => api.get('/business-limits'),
 };
 
 // Service d'autocomplétion optimisé

@@ -21,7 +21,7 @@ export const SubscriptionProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth()
 
   // Fonction pour calculer les limites d'abonnement
-  const getSubscriptionLimits = () => {
+  const getSubscriptionLimits = (actualBusinessCount = null) => {
     if (!isAuthenticated || !user) {
       return {
         currentLimit: 1,
@@ -31,19 +31,21 @@ export const SubscriptionProvider = ({ children }) => {
       }
     }
 
+    // Utiliser le nombre réel d'entreprises si fourni, sinon utiliser user.businesses
+    const usedCount = actualBusinessCount !== null ? actualBusinessCount : (user.businesses?.length || 0);
+
     // Si l'utilisateur n'a pas d'abonnement actif, utiliser les limites par défaut
     if (!currentSubscription?.subscription?.plan) {
       return {
         currentLimit: 1,
-        usedCount: user.businesses?.length || 0,
-        canCreateBusiness: (user.businesses?.length || 0) < 1,
-        remainingSlots: Math.max(0, 1 - (user.businesses?.length || 0))
+        usedCount,
+        canCreateBusiness: usedCount < 1,
+        remainingSlots: Math.max(0, 1 - usedCount)
       }
     }
 
     const plan = currentSubscription.subscription.plan
     const businessLimit = plan.business_limit === -1 ? Infinity : plan.business_limit
-    const usedCount = user.businesses?.length || 0
     const canCreateBusiness = businessLimit === Infinity || usedCount < businessLimit
     const remainingSlots = businessLimit === Infinity ? -1 : Math.max(0, businessLimit - usedCount)
 
@@ -108,6 +110,52 @@ export const SubscriptionProvider = ({ children }) => {
     }
   }
 
+  // Choisir un plan avec redirection appropriée
+  const selectPlan = async (planId, paymentMethod = null) => {
+    try {
+      setLoading(true)
+      
+      // Trouver le plan sélectionné
+      const selectedPlan = plans.find(plan => plan.id === planId)
+      
+      if (!selectedPlan) {
+        throw new Error('Plan non trouvé')
+      }
+      
+      // Si c'est le plan gratuit (prix = 0)
+      if (selectedPlan.price === 0) {
+        // Activer directement le plan gratuit
+        const response = await subscriptionService.subscribe(planId, 'free')
+        setCurrentSubscription(response.data)
+        
+        // Ne pas afficher le toast ici, laisser le composant parent le gérer
+        
+        // Rediriger vers le dashboard
+        return { 
+          success: true, 
+          redirectTo: '/dashboard',
+          message: 'Plan gratuit activé avec succès !'
+        }
+      } else {
+        // Pour les plans payants, rediriger vers l'écran de paiement
+        return { 
+          success: true, 
+          redirectTo: '/payment',
+          planId: planId,
+          plan: selectedPlan,
+          message: 'Redirection vers l\'écran de paiement'
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sélection du plan:', error)
+      const errorMessage = error.response?.data?.message || 'Erreur lors de la sélection du plan'
+      toast.error(errorMessage)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // Annuler l'abonnement
   const cancelSubscription = async () => {
     try {
@@ -152,6 +200,7 @@ export const SubscriptionProvider = ({ children }) => {
     error,
     ...limits,
     subscribe,
+    selectPlan,
     cancelSubscription,
     refreshData
   }

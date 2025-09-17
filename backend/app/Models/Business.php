@@ -56,6 +56,11 @@ class Business extends Model
                 $business->slug = Str::slug($business->name);
             }
         });
+
+        // Suppression en cascade des avis associés
+        static::deleting(function ($business) {
+            $business->reviews()->delete();
+        });
     }
 
     public function user()

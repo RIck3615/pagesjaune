@@ -77,7 +77,7 @@ class SubscriptionController extends Controller
     {
         $request->validate([
             'plan_id' => 'required|exists:subscription_plans,id',
-            'payment_method' => 'required|in:stripe,paypal,mobile_money',
+            'payment_method' => 'required|in:stripe,paypal,mobile_money,free', // Ajouter 'free'
         ]);
 
         $user = Auth::user();
@@ -97,16 +97,36 @@ class SubscriptionController extends Controller
             $subscription = UserSubscription::create([
                 'user_id' => $user->id,
                 'subscription_plan_id' => $plan->id,
-                'status' => 'pending',
+                'status' => $plan->price == 0 ? 'active' : 'pending', // Activer directement si gratuit
                 'starts_at' => now(),
                 'expires_at' => now()->addDays($plan->duration_days),
                 'amount_paid' => $plan->price,
                 'currency' => $plan->currency,
                 'payment_method' => $request->payment_method,
-                'auto_renew' => true,
+                'auto_renew' => $plan->price > 0, // Pas de renouvellement automatique pour le gratuit
             ]);
 
-            // Créer le paiement
+            // Si c'est un plan gratuit, l'activer directement
+            if ($plan->price == 0) {
+                // Mettre à jour l'utilisateur directement
+                $user->update([
+                    'current_subscription_id' => $subscription->id,
+                    'subscription_expires_at' => $subscription->expires_at,
+                    'has_premium_features' => false, // Le plan gratuit n'a pas de fonctionnalités premium
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Plan gratuit activé avec succès',
+                    'data' => [
+                        'subscription' => $subscription->load('plan')
+                    ]
+                ]);
+            }
+
+            // Pour les plans payants, continuer avec le processus de paiement
             $payment = Payment::create([
                 'user_id' => $user->id,
                 'subscription_id' => $subscription->id,

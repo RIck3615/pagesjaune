@@ -48,6 +48,9 @@ Route::prefix('v1')->group(function () {
     // Public subscription plans
     Route::get('/subscription-plans', [SubscriptionController::class, 'getPlans']);
 
+    // Nouvelle route pour vérifier les limites
+    Route::get('/business-limits', [BusinessController::class, 'checkLimits'])->middleware('auth:sanctum');
+
     // Admin routes (SANS middleware auth:sanctum)
     Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'getDashboard']);

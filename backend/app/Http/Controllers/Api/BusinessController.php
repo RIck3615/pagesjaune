@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Category;
+use App\Models\SubscriptionPlan; // Ajout de l'import
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
@@ -185,15 +186,36 @@ class BusinessController extends Controller
 
         // Vérifier les limites d'abonnement
         if (!$user->canCreateBusiness()) {
+            // Récupérer les plans supérieurs suggérés
+            $currentLimit = $user->hasActiveSubscription()
+                ? $user->currentSubscription->plan->business_limit
+                : 1;
+
+            $suggestedPlans = SubscriptionPlan::active()
+                ->where('business_limit', '>', $currentLimit)
+                ->orWhere('business_limit', -1) // Inclure les plans illimités
+                ->orderBy('price')
+                ->limit(3)
+                ->get();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Limite d\'entreprises atteinte. Veuillez améliorer votre abonnement.',
+                'error_type' => 'business_limit_reached',
                 'remaining_slots' => $user->getRemainingBusinessSlots(),
                 'requires_subscription' => true,
-                'current_limit' => $user->hasActiveSubscription()
-                    ? $user->currentSubscription->plan->business_limit
-                    : 1,
-                'current_count' => $user->businesses()->count()
+                'current_limit' => $currentLimit,
+                'current_count' => $user->businesses()->count(),
+                'current_plan' => $user->hasActiveSubscription()
+                    ? $user->currentSubscription->plan
+                    : null,
+                'suggested_plans' => $suggestedPlans,
+                'upgrade_benefits' => [
+                    'Créez plus d\'entreprises',
+                    'Augmentez votre visibilité',
+                    'Accédez aux statistiques avancées',
+                    'Support prioritaire'
+                ]
             ], 403);
         }
 
@@ -612,6 +634,51 @@ class BusinessController extends Controller
             'success' => true,
             'data' => $businesses
         ]);
+    }
+
+    // Nouvelle méthode pour vérifier les limites avant la création
+    public function checkLimits(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Utilisateur non authentifié'
+            ], 401);
+        }
+
+        $canCreate = $user->canCreateBusiness();
+        $currentCount = $user->businesses()->count();
+        $currentLimit = $user->getBusinessLimit();
+        $remainingSlots = $user->getRemainingBusinessSlots();
+
+        $response = [
+            'success' => true,
+            'can_create' => $canCreate,
+            'current_count' => $currentCount,
+            'current_limit' => $currentLimit,
+            'remaining_slots' => $remainingSlots,
+            'current_plan' => $user->hasActiveSubscription()
+                ? $user->currentSubscription->plan
+                : null
+        ];
+
+        // Si la limite est atteinte, ajouter les plans suggérés
+        if (!$canCreate) {
+            $suggestedPlans = SubscriptionPlan::active()
+                ->where('business_limit', '>', $currentLimit)
+                ->orWhere('business_limit', -1)
+                ->orderBy('price')
+                ->limit(3)
+                ->get();
+
+            $response['suggested_plans'] = $suggestedPlans;
+            $response['upgrade_message'] = "Vous avez atteint votre limite de {$currentLimit} entreprise" .
+                ($currentLimit > 1 ? 's' : '') . ". Améliorez votre plan pour en créer plus.";
+        }
+
+        return response()->json($response);
     }
 }
 

@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Check, Star, Zap, Crown, Building2, BarChart3, MessageCircle, Headphones } from 'lucide-react'
 import { useSubscription } from '../hooks/useSubscription'
 import { useAuth } from '../hooks/useAuth'
+import toast from 'react-hot-toast'
 
 const ChoosePlan = () => {
   const navigate = useNavigate()
-  const { plans, loading, subscribe } = useSubscription()
+  const { plans, loading, selectPlan } = useSubscription() // Utiliser selectPlan au lieu de subscribe
   const { user, isAuthenticated } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('stripe')
@@ -23,12 +24,28 @@ const ChoosePlan = () => {
 
     setSubscribing(true)
     try {
-      const result = await subscribe(selectedPlan.id, paymentMethod)
+      const result = await selectPlan(selectedPlan.id, paymentMethod)
+      
       if (result.success) {
-        navigate('/dashboard')
+        toast.success(result.message)
+        
+        // Rediriger selon le type de plan
+        if (result.redirectTo === '/dashboard') {
+          // Plan gratuit - redirection directe
+          navigate('/dashboard')
+        } else if (result.redirectTo === '/payment') {
+          // Plan payant - redirection vers paiement avec les données du plan
+          navigate('/payment', { 
+            state: { 
+              plan: result.plan,
+              planId: result.planId 
+            } 
+          })
+        }
       }
     } catch (error) {
-      console.error('Erreur lors de l\'abonnement:', error)
+      console.error('Erreur lors de la sélection du plan:', error)
+      // Le toast d'erreur est déjà géré dans selectPlan
     } finally {
       setSubscribing(false)
     }
