@@ -200,7 +200,7 @@ const Dashboard = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+          <div className="w-12 h-12 mx-auto mb-4 border-b-2 rounded-full border-primary-600 animate-spin"></div>
           <p className="text-gray-600">Chargement du tableau de bord...</p>
         </div>
       </div>
@@ -227,7 +227,7 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-4">
                 <div className="p-6 bg-white rounded-lg shadow">
                   <div className="flex items-center">
-                    <Building2 className="w-8 h-8 text-blue-600" />
+                    <Building2 className="w-8 h-8 text-primary-600" />
                     <div className="ml-4">
                       <p className="text-sm font-medium text-gray-600">Entreprises</p>
                       <p className="text-2xl font-semibold text-gray-900">{stats.totalBusinesses}</p>
@@ -285,7 +285,7 @@ const Dashboard = () => {
                             ? 'bg-purple-100 text-purple-800' 
                             : businessLimits.currentPlan?.price === 0 || !businessLimits.currentPlan
                             ? 'bg-gray-100 text-gray-800'
-                            : 'bg-blue-100 text-blue-800'
+                            : 'bg-primary-100 text-primary-800'
                         }`}>
                           {businessLimits.isEnterprise && <Crown className="w-3 h-3 mr-1" />}
                           {businessLimits.currentPlan?.name || 'Plan Gratuit'}
@@ -346,7 +346,7 @@ const Dashboard = () => {
                           Vous avez utilisé toutes vos entreprises. 
                           <button
                             onClick={handleUpgradeClick}
-                            className="ml-1 font-medium text-blue-600 underline hover:text-blue-800"
+                            className="ml-1 font-medium underline text-primary-600 hover:text-primary-800"
                           >
                             Améliorez votre plan
                           </button> pour créer plus d'entreprises.
@@ -357,14 +357,14 @@ const Dashboard = () => {
                 )}
 
                 {businessLimits.canCreate && businessLimits.currentLimit !== 'Illimité' && (
-                  <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                  <div className="p-4 border rounded-lg border-primary-200 bg-primary-50">
                     <div className="flex items-start space-x-3">
-                      <CheckCircle className="flex-shrink-0 w-5 h-5 text-blue-500 mt-0.5" />
+                      <CheckCircle className="flex-shrink-0 w-5 h-5 text-primary-500 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-blue-800">
+                        <p className="text-sm font-medium text-primary-800">
                           Espace disponible
                         </p>
-                        <p className="mt-1 text-sm text-blue-700">
+                        <p className="mt-1 text-sm text-primary-700">
                           Vous pouvez encore créer <strong>{businessLimits.remainingSlots}</strong> entreprise{businessLimits.remainingSlots > 1 ? 's' : ''}.
                         </p>
                       </div>
@@ -393,7 +393,7 @@ const Dashboard = () => {
                   <div className="mt-4">
                     <button
                       onClick={handleUpgradeClick}
-                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 transition-colors bg-blue-100 rounded-lg hover:bg-blue-200"
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium transition-colors rounded-lg text-primary-700 bg-primary-100 hover:bg-primary-200"
                     >
                       <Crown className="w-4 h-4 mr-2" />
                       Découvrir les plans supérieurs
@@ -408,7 +408,7 @@ const Dashboard = () => {
                 <div className="flex flex-wrap gap-4">
                   <Link
                     to="/my-businesses"
-                    className="inline-flex items-center px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    className="inline-flex items-center px-4 py-2 text-white rounded-lg bg-primary-600 hover:bg-primary-700"
                   >
                     <Building2 className="w-4 h-4 mr-2" />
                     Gérer mes entreprises
@@ -465,7 +465,7 @@ const Dashboard = () => {
                   <h2 className="text-lg font-semibold text-gray-900">Mes entreprises</h2>
                   <Link
                     to="/my-businesses"
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                    className="text-sm font-medium text-primary-600 hover:text-primary-800"
                   >
                     Voir toutes
                   </Link>
@@ -542,7 +542,7 @@ const Dashboard = () => {
                       disabled={!businessLimits.canCreate}
                       className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
                         businessLimits.canCreate
-                          ? 'text-white bg-blue-600 hover:bg-blue-700'
+                          ? 'text-white bg-primary-600 hover:bg-primary-700'
                           : 'text-gray-400 bg-gray-200 cursor-not-allowed'
                       }`}
                       title={
@@ -573,7 +573,7 @@ const Dashboard = () => {
                   <h2 className="text-lg font-semibold text-gray-900">Avis récents</h2>
                   <Link
                     to="/my-reviews"
-                    className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                    className="text-sm font-medium text-primary-600 hover:text-primary-800"
                   >
                     Voir tous
                   </Link>
@@ -635,9 +635,9 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <Link
                   to="/search"
-                  className="p-6 transition-shadow border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md"
+                  className="p-6 transition-shadow border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-md"
                 >
-                  <Building2 className="w-8 h-8 mb-4 text-blue-600" />
+                  <Building2 className="w-8 h-8 mb-4 text-primary-600" />
                   <h3 className="mb-2 text-lg font-medium text-gray-900">
                     Rechercher des entreprises
                   </h3>
@@ -648,7 +648,7 @@ const Dashboard = () => {
                 
                 <Link
                   to="/categories"
-                  className="p-6 transition-shadow border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md"
+                  className="p-6 transition-shadow border border-gray-200 rounded-lg hover:border-primary-300 hover:shadow-md"
                 >
                   <MapPin className="w-8 h-8 mb-4 text-green-600" />
                   <h3 className="mb-2 text-lg font-medium text-gray-900">

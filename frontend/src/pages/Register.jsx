@@ -205,7 +205,7 @@ const Register = () => {
                 <p className="mt-1 text-sm text-red-600">{getFieldError('role')}</p>
               )}
               {formData.role === 'business' && (
-                <p className="mt-2 text-sm text-blue-600">
+                <p className="mt-2 text-sm text-primary-600">
                   💡 En tant qu'entreprise, vous pourrez choisir un plan d'abonnement après l'inscription
                 </p>
               )}

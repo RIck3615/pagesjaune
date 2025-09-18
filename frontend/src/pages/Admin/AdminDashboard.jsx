@@ -245,7 +245,7 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
           <div className="p-6 bg-white rounded-lg shadow">
             <div className="flex items-center">
-              <Users className="w-8 h-8 text-blue-600" />
+              <Users className="w-8 h-8 text-primary-600" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Utilisateurs</p>
                 <p className="text-2xl font-semibold text-gray-900">{stats?.total_users || 0}</p>
@@ -376,7 +376,7 @@ const AdminDashboard = () => {
                 placeholder="Rechercher une entreprise..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -385,7 +385,7 @@ const AdminDashboard = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="all">Toutes</option>
               <option value="verified">Vérifiées</option>
@@ -400,7 +400,7 @@ const AdminDashboard = () => {
       {/* Liste des entreprises */}
       {businessesLoading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-b-2 rounded-full border-primary-600 animate-spin"></div>
           <span className="ml-2 text-gray-600">Chargement...</span>
         </div>
       ) : (
@@ -541,7 +541,7 @@ const AdminDashboard = () => {
                 placeholder="Rechercher dans les avis..."
                 value={reviewSearchTerm}
                 onChange={(e) => setReviewSearchTerm(e.target.value)}
-                className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -550,7 +550,7 @@ const AdminDashboard = () => {
             <select
               value={reviewStatusFilter}
               onChange={(e) => setReviewStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="pending">En attente</option>
               <option value="approved">Approuvés</option>
@@ -564,7 +564,7 @@ const AdminDashboard = () => {
       {/* Liste des avis */}
       {reviewsLoading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-b-2 rounded-full border-primary-600 animate-spin"></div>
           <span className="ml-2 text-gray-600">Chargement...</span>
         </div>
       ) : (
@@ -785,7 +785,7 @@ const AdminDashboard = () => {
       >
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-4 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+            <div className="w-12 h-12 mx-auto mb-4 border-b-2 rounded-full border-primary-600 animate-spin"></div>
             <p className="text-gray-600">Chargement du tableau de bord...</p>
           </div>
         </div>
@@ -806,7 +806,7 @@ const AdminDashboard = () => {
           <p className="mb-6 text-gray-600">{error}</p>
           <button
             onClick={loadDashboardData}
-            className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 text-white rounded-lg bg-primary-600 hover:bg-primary-700"
           >
             Réessayer
           </button>
