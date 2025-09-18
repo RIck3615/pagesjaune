@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, Menu, X, User, LogOut, Building2, Settings, Shield, MapPin } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/api';
+import Logo from '../Logo';
 
 const Header = ({ onSearch }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -96,10 +97,7 @@ const Header = ({ onSearch }) => {
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <Building2 className="w-8 h-8 text-blue-600" />
-            <span className="text-xl font-bold text-gray-900">PagesJaunes.cd</span>
-          </Link>
+          <Logo linkTo="/" size="md" />
 
           {/* Search Bar - Desktop */}
           <div className="flex-1 hidden max-w-lg mx-8 md:flex">

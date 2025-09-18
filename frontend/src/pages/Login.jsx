@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, Building2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import Logo from '../components/Logo';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -47,12 +48,10 @@ const Login = () => {
     <div className="flex flex-col justify-center min-h-screen py-12 bg-gray-50 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="flex items-center justify-center w-16 h-16 rounded-lg" style={{ background: 'linear-gradient(135deg, #009ee5, #faed09)' }}>
-            <span className="text-2xl font-bold text-white">PJ</span>
-          </div>
+          <Logo size="xl" showText={false} variant="icon-only" />
         </div>
         <h2 className="mt-6 text-3xl font-bold text-center text-gray-900">
-          Connexion à votre compte
+          Connexion
         </h2>
         <p className="mt-2 text-sm text-center text-gray-600">
           Ou{' '}

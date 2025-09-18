@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import Logo from '../Logo';
 
 const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
   const { logout } = useAuth();
@@ -34,7 +35,7 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
     },
     {
       id: 'reviews',
-      title: 'Avis & Modération',
+      title: 'Avis',
       icon: MessageCircle,
       description: 'Modération des avis'
     },
@@ -45,16 +46,22 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
       description: 'Gestion des utilisateurs'
     },
     {
+      id: 'categories',
+      title: 'Catégories',
+      icon: Settings,
+      description: 'Gestion des catégories'
+    },
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      icon: BarChart3,
+      description: 'Statistiques et rapports'
+    },
+    {
       id: 'subscriptions',
       title: 'Abonnements',
       icon: CreditCard,
       description: 'Gestion des abonnements'
-    },
-    {
-      id: 'reports',
-      title: 'Rapports',
-      icon: BarChart3,
-      description: 'Rapports et statistiques'
     },
     {
       id: 'notifications',
@@ -67,12 +74,6 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
       title: 'Système',
       icon: Database,
       description: 'Configuration système'
-    },
-    {
-      id: 'settings',
-      title: 'Paramètres',
-      icon: Settings,
-      description: 'Paramètres généraux'
     }
   ];
 
@@ -82,7 +83,6 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
 
   const handleSectionChange = (sectionId) => {
     onSectionChange(sectionId);
-    onClose(); // Fermer la sidebar sur mobile après sélection
   };
 
   return (
@@ -102,14 +102,9 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="flex flex-col h-full">
-          {/* Header */}
+          {/* Header avec logo */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">Admin</span>
-            </div>
+            <Logo size="lg" />
             <button
               onClick={onClose}
               className="p-1 text-gray-400 rounded-md lg:hidden hover:text-gray-600"
@@ -119,7 +114,7 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
@@ -129,17 +124,14 @@ const AdminSidebar = ({ isOpen, onClose, activeSection, onSectionChange }) => {
                   key={item.id}
                   onClick={() => handleSectionChange(item.id)}
                   className={`
-                    flex items-center w-full px-3 py-3 text-sm font-medium rounded-lg transition-colors duration-200 group text-left
+                    w-full flex items-center px-3 py-3 text-left rounded-lg transition-colors duration-200
                     ${isActive 
                       ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' 
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                     }
                   `}
                 >
-                  <Icon className={`
-                    w-5 h-5 mr-3 transition-colors duration-200
-                    ${isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'}
-                  `} />
+                  <Icon className={`w-5 h-5 mr-3 ${isActive ? 'text-blue-700' : 'text-gray-500'}`} />
                   <div className="flex-1">
                     <div className="font-medium">{item.title}</div>
                     <div className="text-xs text-gray-500">{item.description}</div>

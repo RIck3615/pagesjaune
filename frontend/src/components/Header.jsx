@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Search, Menu, X, User, LogOut, Settings, Shield } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth.jsx'
 import SearchBar from './SearchBar'
+import Logo from './Logo'
 
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -25,25 +26,12 @@ const Header = () => {
   // Déterminer le lien du logo selon le rôle
   const logoLink = isAdmin ? '/admin/dashboard' : '/'
 
-  // Debug temporaire
-  console.log('Header Debug:', { 
-    isAdmin, 
-    userRole: user?.role, 
-    dashboardLink,
-    isAuthenticated 
-  })
-
   return (
     <header className="bg-white border-b shadow-sm">
       <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo - Redirige vers admin dashboard si admin, sinon vers accueil */}
-          <Link to={logoLink} className="flex items-center space-x-2">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary-600">
-              <span className="text-lg font-bold text-white">P</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">PagesJaunes CD</span>
-          </Link>
+          <Logo linkTo={logoLink} size="md" />
 
           {/* Search Bar - Hidden on mobile */}
           {isHomePage && (
@@ -112,7 +100,6 @@ const Header = () => {
             )}
           </div>
 
-          {/* Mobile menu button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 text-gray-400 rounded-md md:hidden hover:text-gray-500 hover:bg-gray-100"
