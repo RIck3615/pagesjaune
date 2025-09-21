@@ -1,10 +1,8 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
 const Logo = ({ 
   size = 'md', 
   showText = true, 
-  linkTo = '/', 
   className = '',
   variant = 'default' // 'default', 'small', 'icon-only'
 }) => {
@@ -27,36 +25,36 @@ const Logo = ({
       case 'small':
         return '/images/logo/logo-small.png';
       case 'icon-only':
-        return '/images/logo/logo.svg';
+        return '/images/logo/logo.png';
       default:
         return '/images/logo/logo.png';
     }
   };
 
-  const LogoContent = () => (
-    <div className={`flex items-center space-x-2 ${className}`}>
+  const LogoIcon = () => (
+    <div className={`${sizeClasses[size]} ${className}`}>
       <img 
-        src={getLogoSrc()}
-        alt="Pagejaune.cd Logo"
-        className={`${sizeClasses[size]} object-contain`}
+        src={getLogoSrc()} 
+        alt="Page Jaune Logo" 
+        className="object-contain w-full h-full"
       />
-      {showText && variant !== 'icon-only' && (
+    </div>
+  );
+
+  if (variant === 'icon-only') {
+    return <LogoIcon />;
+  }
+
+  return (
+    <div className={`flex items-center space-x-2 ${className}`}>
+      <LogoIcon />
+      {showText && (
         <span className={`font-bold text-gray-900 ${textSizeClasses[size]}`}>
           Pagejaune.cd
         </span>
       )}
     </div>
   );
-
-  if (linkTo) {
-    return (
-      <Link to={linkTo} className="transition-opacity hover:opacity-80">
-        <LogoContent />
-      </Link>
-    );
-  }
-
-  return <LogoContent />;
 };
 
 export default Logo;

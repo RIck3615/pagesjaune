@@ -6,8 +6,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ReviewController;
-use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\StatsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +51,14 @@ Route::prefix('v1')->group(function () {
 
     // Nouvelle route pour vérifier les limites
     Route::get('/business-limits', [BusinessController::class, 'checkLimits'])->middleware('auth:sanctum');
+
+    // Routes des statistiques (DÉPLACÉES ICI)
+    Route::prefix('stats')->group(function () {
+        Route::post('/visitors', [StatsController::class, 'recordVisit']);
+        Route::get('/visitors/today', [StatsController::class, 'getTodayCount']);
+        Route::get('/visitors/total', [StatsController::class, 'getTotalCount']);
+        Route::get('/visitors/weekly', [StatsController::class, 'getWeeklyStats']);
+    });
 
     // Admin routes (SANS middleware auth:sanctum)
     Route::prefix('admin')->group(function () {
