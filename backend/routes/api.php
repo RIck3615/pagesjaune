@@ -83,12 +83,12 @@ Route::prefix('v1')->group(function () {
         Route::put('/businesses/{business}/reject', [AdminController::class, 'rejectBusiness']);
     });
 
-    // User business routes (SANS middleware auth:sanctum)
-    Route::get('/my-businesses', [BusinessController::class, 'getMyBusinesses']);
-    Route::post('/businesses', [BusinessController::class, 'store']);
-    Route::post('/businesses/{business}', [BusinessController::class, 'update']); // Accepter POST
-    Route::put('/businesses/{business}', [BusinessController::class, 'update']); // Garder PUT pour JSON
-    Route::delete('/businesses/{business}', [BusinessController::class, 'destroy']);
+    // User business routes (AVEC middleware auth:sanctum)
+    Route::get('/my-businesses', [BusinessController::class, 'getMyBusinesses'])->middleware('auth:sanctum');
+    Route::post('/businesses', [BusinessController::class, 'store'])->middleware('auth:sanctum');
+    Route::post('/businesses/{business}', [BusinessController::class, 'update'])->middleware('auth:sanctum'); // Accepter POST
+    Route::put('/businesses/{business}', [BusinessController::class, 'update'])->middleware('auth:sanctum'); // Garder PUT pour JSON
+    Route::delete('/businesses/{business}', [BusinessController::class, 'destroy'])->middleware('auth:sanctum');
 });
 
 // Protected routes (avec middleware auth:sanctum)
@@ -123,4 +123,3 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
 // Recherche par proximité
 Route::get('/businesses/proximity', [BusinessController::class, 'searchByProximity']);
-

@@ -6,6 +6,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+# Fichiers d'environnement (secrets)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Sauf le template
+!.env.example
 
 node_modules
 dist

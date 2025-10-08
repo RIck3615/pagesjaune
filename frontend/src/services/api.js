@@ -12,8 +12,15 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
+    console.log('🔑 Intercepteur - Token présent:', !!token);
+    console.log('🔑 Intercepteur - Token complet:', token);
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Intercepteur - Token ajouté aux headers');
+      console.log('📤 Intercepteur - Headers finaux:', config.headers);
+    } else {
+      console.warn('⚠️ Intercepteur - Aucun token d\'authentification trouvé');
     }
     
     // Gérer FormData automatiquement
@@ -28,8 +35,12 @@ api.interceptors.request.use(
 
 // Intercepteur pour gérer les réponses
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ Intercepteur - Réponse reçue:', response.status);
+    return response;
+  },
   (error) => {
+    console.log('❌ Intercepteur - Erreur:', error.response?.status, error.response?.data);
     if (error.response?.status === 401) {
       console.log('Erreur 401 détectée, mais on ne nettoie pas automatiquement le localStorage')
     }
