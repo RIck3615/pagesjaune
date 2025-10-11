@@ -50,16 +50,15 @@ class BusinessController extends Controller
         }
 
         // Filter by verified status - Par défaut, afficher seulement les entreprises vérifiées
+        // Filter by verified status
         if ($request->has('verified')) {
             if ($request->verified === 'true' || $request->verified === true) {
                 $query->verified();
             } elseif ($request->verified === 'false' || $request->verified === false) {
                 $query->where('is_verified', false);
             }
-        } else {
-            // Par défaut, afficher seulement les entreprises vérifiées
-            $query->verified();
         }
+        // Si verified n'est pas dans la requête, on affiche TOUTES les entreprises
 
         // Filter by premium status
         if ($request->has('premium')) {
@@ -76,18 +75,18 @@ class BusinessController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 // Recherche exacte (priorité maximale)
                 $q->where('name', 'like', "{$searchTerm}")
-                  // Recherche qui commence par le terme (haute priorité)
-                  ->orWhere('name', 'like', "{$searchTerm}%")
-                  // Recherche dans le nom (priorité moyenne)
-                  ->orWhere('name', 'like', "%{$searchTerm}%")
-                  // Recherche dans la description
-                  ->orWhere('description', 'like', "%{$searchTerm}%")
-                  // Recherche dans l'adresse
-                  ->orWhere('address', 'like', "%{$searchTerm}%")
-                  // Recherche dans les catégories
-                  ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
-                      $catQuery->where('name', 'like', "%{$searchTerm}%");
-                  });
+                    // Recherche qui commence par le terme (haute priorité)
+                    ->orWhere('name', 'like', "{$searchTerm}%")
+                    // Recherche dans le nom (priorité moyenne)
+                    ->orWhere('name', 'like', "%{$searchTerm}%")
+                    // Recherche dans la description
+                    ->orWhere('description', 'like', "%{$searchTerm}%")
+                    // Recherche dans l'adresse
+                    ->orWhere('address', 'like', "%{$searchTerm}%")
+                    // Recherche dans les catégories
+                    ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
+                        $catQuery->where('name', 'like', "%{$searchTerm}%");
+                    });
             });
         }
 
@@ -128,7 +127,7 @@ class BusinessController extends Controller
         if ($request->has('rating') && $request->rating) {
             $query->whereHas('approvedReviews', function ($q) use ($request) {
                 $q->selectRaw('AVG(rating) as avg_rating')
-                  ->havingRaw('AVG(rating) >= ?', [$request->rating]);
+                    ->havingRaw('AVG(rating) >= ?', [$request->rating]);
             });
         }
 
@@ -457,9 +456,9 @@ class BusinessController extends Controller
             case 'business':
                 $suggestions = Business::active()
                     ->verified()
-                    ->where(function($q) use ($query) {
+                    ->where(function ($q) use ($query) {
                         $q->where('name', 'like', "{$query}%")
-                          ->orWhere('name', 'like', "%{$query}%");
+                            ->orWhere('name', 'like', "%{$query}%");
                     })
                     ->select('name')
                     ->distinct()
@@ -477,9 +476,9 @@ class BusinessController extends Controller
 
             case 'category':
                 $suggestions = Category::active()
-                    ->where(function($q) use ($query) {
+                    ->where(function ($q) use ($query) {
                         $q->where('name', 'like', "{$query}%")
-                          ->orWhere('name', 'like', "%{$query}%");
+                            ->orWhere('name', 'like', "%{$query}%");
                     })
                     ->select('name')
                     ->distinct()
@@ -498,11 +497,11 @@ class BusinessController extends Controller
             case 'location':
                 $suggestions = Business::active()
                     ->verified()
-                    ->where(function($q) use ($query) {
+                    ->where(function ($q) use ($query) {
                         $q->where('city', 'like', "{$query}%")
-                          ->orWhere('city', 'like', "%{$query}%")
-                          ->orWhere('province', 'like', "{$query}%")
-                          ->orWhere('province', 'like', "%{$query}%");
+                            ->orWhere('city', 'like', "%{$query}%")
+                            ->orWhere('province', 'like', "{$query}%")
+                            ->orWhere('province', 'like', "%{$query}%");
                     })
                     ->select('city', 'province')
                     ->distinct()
@@ -517,7 +516,7 @@ class BusinessController extends Controller
                     ", [$query, "{$query}%", $query, "{$query}%"])
                     ->limit(10)
                     ->get()
-                    ->map(function($item) {
+                    ->map(function ($item) {
                         return [
                             'city' => $item->city,
                             'province' => $item->province,
@@ -560,13 +559,13 @@ class BusinessController extends Controller
             $searchTerm = trim($request->search);
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'like', "{$searchTerm}")
-                  ->orWhere('name', 'like', "{$searchTerm}%")
-                  ->orWhere('name', 'like', "%{$searchTerm}%")
-                  ->orWhere('description', 'like', "%{$searchTerm}%")
-                  ->orWhere('address', 'like', "%{$searchTerm}%")
-                  ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
-                      $catQuery->where('name', 'like', "%{$searchTerm}%");
-                  });
+                    ->orWhere('name', 'like', "{$searchTerm}%")
+                    ->orWhere('name', 'like', "%{$searchTerm}%")
+                    ->orWhere('description', 'like', "%{$searchTerm}%")
+                    ->orWhere('address', 'like', "%{$searchTerm}%")
+                    ->orWhereHas('categories', function ($catQuery) use ($searchTerm) {
+                        $catQuery->where('name', 'like', "%{$searchTerm}%");
+                    });
             });
         }
 
@@ -575,8 +574,8 @@ class BusinessController extends Controller
             $location = trim($request->location);
             $query->where(function ($q) use ($location) {
                 $q->where('city', 'like', "%{$location}%")
-                  ->orWhere('province', 'like', "%{$location}%")
-                  ->orWhere('address', 'like', "%{$location}%");
+                    ->orWhere('province', 'like', "%{$location}%")
+                    ->orWhere('address', 'like', "%{$location}%");
             });
         }
 
@@ -612,18 +611,18 @@ class BusinessController extends Controller
                     sin(radians(latitude))
                 )) AS distance
             ", [$latitude, $longitude, $latitude])
-            ->having('distance', '<=', $radius)
-            ->orderBy('distance');
+                ->having('distance', '<=', $radius)
+                ->orderBy('distance');
 
             // Filtrer seulement les entreprises avec des coordonnées GPS
             $query->whereNotNull('latitude')
-                  ->whereNotNull('longitude')
-                  ->where('latitude', '!=', 0)
-                  ->where('longitude', '!=', 0);
+                ->whereNotNull('longitude')
+                ->where('latitude', '!=', 0)
+                ->where('longitude', '!=', 0);
         } else {
             // Tri par défaut si pas de géolocalisation
             $query->orderBy('is_premium', 'desc')
-                  ->orderBy('created_at', 'desc');
+                ->orderBy('created_at', 'desc');
         }
 
         // Pagination
@@ -681,4 +680,3 @@ class BusinessController extends Controller
         return response()->json($response);
     }
 }
-

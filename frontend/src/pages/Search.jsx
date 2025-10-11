@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import { businessService, categoryService } from '../services/api';
 import SearchBar from '../components/Search/SearchBar';
 import BusinessList from '../components/Business/BusinessList';
-import { Filter, MapPin, Star, Clock, Grid, List } from 'lucide-react';
+import { Filter, MapPin, Star, Clock, Grid, List, BadgeCheck } from 'lucide-react';
 
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -13,7 +13,6 @@ const Search = () => {
     location: searchParams.get('location') || '',
     rating: searchParams.get('rating') || '',
     premium: searchParams.get('premium') === 'true',
-    verified: searchParams.get('verified') === 'true' ? true : undefined
   });
   const [viewMode, setViewMode] = useState('grid'); // 'grid' ou 'list'
 
@@ -98,7 +97,6 @@ const Search = () => {
       location: '',
       rating: '',
       premium: false,
-      verified: undefined
     });
     setSearchParams({ q: query }); // Garder seulement la query
   };
@@ -110,7 +108,6 @@ const Search = () => {
       location: '',
       rating: '',
       premium: false,
-      verified: undefined
     });
     setSearchParams({ q: '' }); // Effacer aussi la query
   };
@@ -228,19 +225,47 @@ const Search = () => {
                   </label>
                 </div>
 
-                {/* Verified Filter */}
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={filters.verified}
-                      onChange={(e) => handleFilterChange('verified', e.target.checked)}
-                      className="text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      Entreprises vérifiées uniquement
-                    </span>
-                  </label>
+                {/* Filtre Vérification */}
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="flex items-center mb-3 text-sm font-semibold text-gray-900">
+                    <BadgeCheck className="w-4 h-4 mr-2" style={{ color: '#009ee5' }} />
+                    Statut de vérification
+                  </h3>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="verified"
+                        checked={filters.verified === undefined}
+                        onChange={() => handleFilterChange('verified', undefined)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Toutes les entreprises</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="verified"
+                        checked={filters.verified === true}
+                        onChange={() => handleFilterChange('verified', true)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        Vérifiées uniquement
+                        <span className="ml-1 text-xs text-gray-500">✓</span>
+                      </span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="verified"
+                        checked={filters.verified === false}
+                        onChange={() => handleFilterChange('verified', false)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Non vérifiées uniquement</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

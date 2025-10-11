@@ -50,20 +50,28 @@ const BusinessCard = ({ business, className = "", onBusinessClick }) => {
               <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
                 {name}
               </h3>
-              <div className="flex items-center mt-1 space-x-2">
-                {is_verified && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Vérifié
-                  </span>
-                )}
-                {is_premium && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Premium
-                  </span>
-                )}
-              </div>
+<div className="flex items-center mt-1 space-x-2">
+  {is_verified ? (
+    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full">
+      <CheckCircle className="w-3 h-3 mr-1" />
+      Vérifié
+    </span>
+  ) : (
+    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">
+      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" strokeWidth="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01" />
+      </svg>
+      Non vérifié
+    </span>
+  )}
+  {is_premium && (
+    <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-800 bg-yellow-100 rounded-full">
+      <Crown className="w-3 h-3 mr-1" />
+      Premium
+    </span>
+  )}
+  </div>
             </div>
           </div>
         </div>
