@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\StatsController;
+use App\Http\Controllers\Api\PasswordResetController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,6 +27,11 @@ Route::prefix('v1')->group(function () {
     // Authentication routes
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+
+    // Password reset routes
+    Route::post('/password/forgot', [PasswordResetController::class, 'forgotPassword']);
+    Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+    Route::post('/password/check-token', [PasswordResetController::class, 'checkToken']);
 
     // Public business routes
     Route::get('/businesses', [BusinessController::class, 'index']);

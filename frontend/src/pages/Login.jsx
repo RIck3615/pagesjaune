@@ -142,9 +142,9 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium hover:opacity-80" style={{ color: '#009ee5' }}>
+                <Link to="/forgot-password" className="font-medium hover:opacity-80" style={{ color: '#009ee5' }}>
                   Mot de passe oublié ?
-                </a>
+                </Link>
               </div>
             </div>
 

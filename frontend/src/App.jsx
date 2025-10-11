@@ -21,6 +21,8 @@ import Search from './pages/Search';
 import BusinessDetails from './pages/BusinessDetails';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import ChoosePlan from './pages/ChoosePlan';
 import SubscriptionManagement from './pages/SubscriptionManagement';
 import Dashboard from './pages/Dashboard';
@@ -74,6 +76,8 @@ function App() {
                       <Register />
                     </PublicRoute>
                   } />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
                   
                   {/* Protected routes */}
                   <Route path="/dashboard" element={
