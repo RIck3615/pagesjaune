@@ -337,7 +337,7 @@ const SearchBar = ({
                 onFocus={handleSearchFocus}
                 onBlur={handleSearchBlur}
                 placeholder={placeholder}
-                className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                className="w-full py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg sm:py-3 sm:text-base focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
               />
               {query && (
                 <button
@@ -392,7 +392,7 @@ const SearchBar = ({
                 onFocus={handleLocationFocus}
                 onBlur={handleLocationBlur}
                 placeholder={locationPlaceholder}
-                className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                className="w-full py-3 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 bg-white border border-gray-300 rounded-lg sm:py-3 sm:text-base focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
               />
               {location && (
                 <button
@@ -434,7 +434,7 @@ const SearchBar = ({
           {/* Bouton de recherche */}
           <button
             type="submit"
-            className="px-6 py-3 font-medium text-white transition-colors bg-yellow-500 rounded-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+            className="px-4 py-3 text-sm font-medium text-white transition-colors bg-yellow-500 rounded-lg sm:px-6 sm:text-base hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
           >
             {isLoadingSearch ? (
               <Loader2 className="w-4 h-4 animate-spin" />

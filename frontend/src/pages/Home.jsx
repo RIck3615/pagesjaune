@@ -158,10 +158,10 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section - Style Pages Jaunes */}
-      <section className="py-8 bg-white">
+      <section className="py-6 bg-white sm:py-8">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="mb-8 text-center">
-            <h1 className="mb-2 text-2xl font-bold text-gray-900 md:text-3xl">
+          <div className="mb-6 text-center sm:mb-8">
+            <h1 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl md:text-3xl">
               La recherche locale commence ici
             </h1>
           </div>
@@ -180,17 +180,17 @@ const Home = () => {
       </section>
 
       {/* Catégories populaires */}
-      <section className="py-8 bg-white border-t">
+      <section className="py-6 bg-white border-t sm:py-8">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-8">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-8">
             {popularCategories.map((category, index) => (
               <Link
                 key={index}
                 to={`/search?category=${category.name}`}
-                className="flex flex-col items-center p-4 transition-colors rounded-lg hover:bg-gray-50 group"
+                className="flex flex-col items-center p-3 transition-colors rounded-lg sm:p-4 hover:bg-gray-50 group"
               >
-                <category.icon className={`h-8 w-8 mb-2 ${category.color} group-hover:scale-110 transition-transform`} />
-                <span className="text-sm font-medium text-center text-gray-700">
+                <category.icon className={`h-6 w-6 sm:h-8 sm:w-8 mb-2 ${category.color} group-hover:scale-110 transition-transform`} />
+                <span className="text-xs font-medium text-center text-gray-700 sm:text-sm">
                   {category.name}
                 </span>
               </Link>
@@ -340,10 +340,10 @@ const Home = () => {
       </section>
 
       {/* Recherches locales populaires */}
-      <section className="py-8 bg-gray-50">
+      <section className="py-6 sm:py-8 bg-gray-50">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <h2 className="mb-6 text-2xl font-bold text-gray-900">Recherches Locales Populaires</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+          <h2 className="mb-4 text-xl font-bold text-gray-900 sm:mb-6 sm:text-2xl">Recherches Locales Populaires</h2>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4 lg:grid-cols-6">
             {[
               'Dentistes', 'Avocats', 'Plombiers', 'Électriciens', 'Couvreurs', 'Garages',
               'Entrepreneurs', 'Vétérinaires', 'Restaurants', 'Rénovations', 'Assurance',
@@ -353,7 +353,7 @@ const Home = () => {
               <Link
                 key={index}
                 to={`/search?q=${encodeURIComponent(search)}`}
-                className="p-3 text-sm font-medium text-center text-gray-700 transition-colors bg-white rounded-lg hover:bg-gray-50 hover:text-gray-900"
+                className="p-2 text-xs font-medium text-center text-gray-700 transition-colors bg-white rounded-lg sm:p-3 sm:text-sm hover:bg-gray-50 hover:text-gray-900"
               >
                 {search}
               </Link>
@@ -363,15 +363,15 @@ const Home = () => {
       </section>
 
       {/* Villes populaires */}
-      <section className="py-8 bg-white">
+      <section className="py-6 bg-white sm:py-8">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <h2 className="mb-6 text-2xl font-bold text-gray-900">Endroits populaires en RDC</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <h2 className="mb-4 text-xl font-bold text-gray-900 sm:mb-6 sm:text-2xl">Endroits populaires en RDC</h2>
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
             {popularCities.map((city, index) => (
               <Link
                 key={index}
                 to={`/search?location=${encodeURIComponent(city)}`}
-                className="p-3 text-sm font-medium text-center text-gray-700 transition-colors rounded-lg bg-gray-50 hover:bg-gray-100 hover:text-gray-900"
+                className="p-2 text-xs font-medium text-center text-gray-700 transition-colors rounded-lg sm:p-3 sm:text-sm bg-gray-50 hover:bg-gray-100 hover:text-gray-900"
               >
                 {city}
               </Link>
