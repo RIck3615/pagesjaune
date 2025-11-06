@@ -27,6 +27,7 @@ import { formatUtils } from '../../utils/format';
 import { getImageUrl } from '../../utils/images';
 import toast from 'react-hot-toast';
 import AdminLayout from '../../components/Admin/AdminLayout';
+import { subscriptionService } from '../../services/subscriptionService';
 
 const AdminDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -678,16 +679,268 @@ const AdminDashboard = () => {
   );
 
   // Composant pour la gestion des utilisateurs
-  const UsersManagement = () => (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <h2 className="mb-6 text-xl font-semibold text-gray-900">Gestion des utilisateurs</h2>
-      <div className="py-12 text-center">
-        <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-        <h3 className="mb-2 text-lg font-medium text-gray-900">Gestion des utilisateurs</h3>
-        <p className="text-gray-500">Cette fonctionnalité sera bientôt disponible.</p>
+  const UsersManagement = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [showPlanModal, setShowPlanModal] = useState(false);
+    const [selectedPlanId, setSelectedPlanId] = useState('');
+    const queryClient = useQueryClient();
+
+    // Fetch users (only business accounts)
+    const { data: usersData, isLoading: usersLoading } = useQuery(
+      ['admin-users-business', searchTerm, currentPage],
+      () => adminService.getUsers({
+        role: 'business',
+        search: searchTerm,
+        page: currentPage,
+        per_page: 10
+      }),
+      {
+        select: (response) => response.data.data,
+      }
+    );
+
+    // Fetch subscription plans
+    const { data: plansData } = useQuery(
+      'subscription-plans',
+      () => subscriptionService.getPlans(),
+      {
+        select: (response) => response.data.data || response.data,
+      }
+    );
+
+    const users = usersData?.data || [];
+    const plans = plansData || [];
+
+    // Mutation pour attribuer un plan
+    const assignPlanMutation = useMutation(
+      ({ userId, planId }) => adminService.assignPlan(userId, { plan_id: planId }),
+      {
+        onSuccess: () => {
+          toast.success('Plan attribué avec succès');
+          queryClient.invalidateQueries(['admin-users-business']);
+          setShowPlanModal(false);
+          setSelectedUser(null);
+          setSelectedPlanId('');
+        },
+        onError: (error) => {
+          toast.error(error.response?.data?.message || 'Erreur lors de l\'attribution du plan');
+        }
+      }
+    );
+
+    const handleAssignPlan = (user) => {
+      setSelectedUser(user);
+      setSelectedPlanId(user.current_subscription?.plan?.id || '');
+      setShowPlanModal(true);
+    };
+
+    const handleConfirmAssignPlan = () => {
+      if (!selectedUser || !selectedPlanId) {
+        toast.error('Veuillez sélectionner un plan');
+        return;
+      }
+      assignPlanMutation.mutate({
+        userId: selectedUser.id,
+        planId: selectedPlanId
+      });
+    };
+
+    const getCurrentPlanName = (user) => {
+      if (user.current_subscription?.plan) {
+        return user.current_subscription.plan.name;
+      }
+      return 'Aucun plan';
+    };
+
+    const getCurrentPlanStatus = (user) => {
+      if (!user.current_subscription) {
+        return { text: 'Aucun plan', color: 'bg-gray-100 text-gray-800' };
+      }
+      
+      if (user.current_subscription.isActive && user.current_subscription.expires_at > new Date()) {
+        return { text: 'Actif', color: 'bg-green-100 text-green-800' };
+      }
+      
+      return { text: 'Expiré', color: 'bg-red-100 text-red-800' };
+    };
+
+    return (
+      <div className="p-6 bg-white rounded-lg shadow">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">Gestion des utilisateurs</h2>
+          <span className="text-sm text-gray-500">
+            {usersData?.total || 0} utilisateurs entreprise
+          </span>
+        </div>
+
+        {/* Filtres et recherche */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+            <input
+              type="text"
+              placeholder="Rechercher un utilisateur..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+        </div>
+
+        {/* Liste des utilisateurs */}
+        {usersLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-b-2 rounded-full border-primary-600 animate-spin"></div>
+            <span className="ml-2 text-gray-600">Chargement...</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Utilisateur
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Plan actuel
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Entreprises
+                  </th>
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center">
+                      <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <h3 className="mb-2 text-lg font-medium text-gray-900">
+                        Aucun utilisateur entreprise trouvé
+                      </h3>
+                      <p className="text-gray-500">
+                        Aucun utilisateur avec un compte entreprise ne correspond à votre recherche.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user) => {
+                    const planStatus = getCurrentPlanStatus(user);
+                    return (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {getCurrentPlanName(user)}
+                          </div>
+                          {user.current_subscription?.expires_at && (
+                            <div className="text-xs text-gray-500">
+                              Expire le {formatUtils.date(user.current_subscription.expires_at)}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${planStatus.color}`}>
+                            {planStatus.text}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {user.businesses_count || 0} entreprise{user.businesses_count !== 1 ? 's' : ''}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                          <button
+                            onClick={() => handleAssignPlan(user)}
+                            className="inline-flex items-center px-3 py-1 text-sm font-medium border rounded-md text-primary-700 bg-primary-100 border-primary-200 hover:bg-primary-200"
+                          >
+                            <CreditCard className="w-4 h-4 mr-1" />
+                            Attribuer un plan
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Modal pour attribuer un plan */}
+        {showPlanModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md mx-4 bg-white rounded-lg shadow-xl">
+              <div className="p-6">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                  Attribuer un plan à {selectedUser?.name}
+                </h3>
+                
+                <div className="mb-4">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">
+                    Sélectionner un plan
+                  </label>
+                  <select
+                    value={selectedPlanId}
+                    onChange={(e) => setSelectedPlanId(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">-- Sélectionner un plan --</option>
+                    {plans.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} - ${plan.price}/{plan.duration_days === 365 ? 'an' : 'mois'} 
+                        ({plan.business_limit === -1 ? 'Illimité' : plan.business_limit} entreprises)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedUser?.current_subscription?.plan && (
+                  <div className="p-3 mb-4 border border-yellow-200 rounded-lg bg-yellow-50">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Plan actuel:</strong> {selectedUser.current_subscription.plan.name}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowPlanModal(false);
+                      setSelectedUser(null);
+                      setSelectedPlanId('');
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleConfirmAssignPlan}
+                    disabled={!selectedPlanId || assignPlanMutation.isLoading}
+                    className="px-4 py-2 text-sm font-medium text-white rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {assignPlanMutation.isLoading ? 'Attribution...' : 'Attribuer'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   // Composant pour les abonnements
   const SubscriptionsManagement = () => (

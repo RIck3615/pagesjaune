@@ -7,9 +7,11 @@ use App\Models\Business;
 use App\Models\Category;
 use App\Models\Review;
 use App\Models\User;
+use App\Models\UserSubscription; // Ajouter cet import
+use App\Models\SubscriptionPlan; // Ajouter cet import
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\DB; // Utiliser DB pour les transactions
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AdminController extends Controller
@@ -94,9 +96,9 @@ class AdminController extends Controller
             if ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%")
-                      ->orWhere('city', 'like', "%{$search}%");
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%");
                 });
             }
 
@@ -126,7 +128,6 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => $businesses
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -151,7 +152,6 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => $business
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -202,7 +202,6 @@ class AdminController extends Controller
                 'message' => 'Entreprise mise à jour avec succès',
                 'data' => $business
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -227,7 +226,6 @@ class AdminController extends Controller
                 'success' => true,
                 'message' => 'Entreprise supprimée avec succès'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -253,7 +251,6 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => $categories
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -273,14 +270,21 @@ class AdminController extends Controller
         try {
             $perPage = $request->get('per_page', 10);
             $search = $request->get('search', '');
+            $role = $request->get('role', ''); // Filtrer par rôle
 
-            $query = User::withCount('businesses');
+            $query = User::with(['currentSubscription.plan', 'subscriptions.plan'])
+                ->withCount('businesses');
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
+            }
+
+            // Filtrer par rôle si spécifié
+            if ($role) {
+                $query->where('role', $role);
             }
 
             $users = $query->paginate($perPage);
@@ -289,11 +293,123 @@ class AdminController extends Controller
                 'success' => true,
                 'data' => $users
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Erreur lors du chargement des utilisateurs',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getUser(Request $request, $id): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        try {
+            $targetUser = User::with(['currentSubscription.plan', 'subscriptions.plan', 'businesses'])
+                ->withCount('businesses')
+                ->findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $targetUser
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement de l\'utilisateur',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function assignPlan(Request $request, $userId): JsonResponse
+    {
+        $user = $this->checkAuth($request);
+        if (!$user) {
+            return response()->json(['error' => 'Non autorisé'], 401);
+        }
+
+        DB::beginTransaction();
+        try {
+            $targetUser = User::findOrFail($userId);
+
+            // Vérifier que l'utilisateur est une entreprise
+            if (!$targetUser->isBusiness()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Seuls les utilisateurs avec un compte entreprise peuvent avoir un plan'
+                ], 400);
+            }
+
+            $validated = $request->validate([
+                'plan_id' => 'required|exists:subscription_plans,id',
+                'duration_days' => 'nullable|integer|min:1',
+                'amount_paid' => 'nullable|numeric|min:0',
+                'auto_renew' => 'nullable|boolean',
+            ]);
+
+            $plan = SubscriptionPlan::findOrFail($validated['plan_id']);
+
+            // Calculer les dates d'expiration
+            $durationDays = $validated['duration_days'] ?? $plan->duration_days;
+            $startsAt = now();
+            $expiresAt = now()->addDays($durationDays);
+
+            // Désactiver l'ancien abonnement s'il existe
+            if ($targetUser->currentSubscription) {
+                $targetUser->currentSubscription->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                ]);
+            }
+
+            // Créer un nouvel abonnement
+            $subscription = UserSubscription::create([
+                'user_id' => $targetUser->id,
+                'subscription_plan_id' => $plan->id,
+                'status' => 'active',
+                'starts_at' => $startsAt,
+                'expires_at' => $expiresAt,
+                'amount_paid' => $validated['amount_paid'] ?? $plan->price,
+                'currency' => $plan->currency ?? 'USD',
+                'auto_renew' => $validated['auto_renew'] ?? false,
+            ]);
+
+            // Mettre à jour l'utilisateur avec l'abonnement actuel
+            $targetUser->update([
+                'current_subscription_id' => $subscription->id,
+                'subscription_expires_at' => $expiresAt,
+                'has_premium_features' => $plan->price > 0, // Activer les fonctionnalités premium seulement pour les plans payants
+            ]);
+
+            DB::commit();
+
+            $targetUser->load(['currentSubscription.plan', 'subscriptions.plan']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Plan attribué avec succès',
+                'data' => $targetUser
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur de validation',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erreur lors de l\'attribution du plan: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'attribution du plan',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -319,12 +435,12 @@ class AdminController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('comment', 'like', "%{$search}%")
-                  ->orWhereHas('business', function ($businessQuery) use ($search) {
-                      $businessQuery->where('name', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('user', function ($userQuery) use ($search) {
-                      $userQuery->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('business', function ($businessQuery) use ($search) {
+                        $businessQuery->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -392,4 +508,3 @@ class AdminController extends Controller
         ]);
     }
 }
-

@@ -164,8 +164,10 @@ export const reviewService = {
 export const adminService = {
   getDashboard: () => api.get('/admin/dashboard'),
   getUsers: (params = {}) => api.get('/admin/users', { params }),
+  getUser: (id) => api.get(`/admin/users/${id}`),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  assignPlan: (userId, planData) => api.post(`/admin/users/${userId}/assign-plan`, planData),
   getBusinesses: (params = {}) => api.get('/admin/businesses', { params }),
   updateBusiness: (id, data) => api.put(`/admin/businesses/${id}`, data),
   getReviews: (params = {}) => api.get('/admin/reviews', { params }),

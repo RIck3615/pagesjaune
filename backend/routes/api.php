@@ -76,6 +76,8 @@ Route::prefix('v1')->group(function () {
 
         // User management
         Route::get('/users', [AdminController::class, 'getUsers']);
+        Route::get('/users/{user}', [AdminController::class, 'getUser']);
+        Route::post('/users/{user}/assign-plan', [AdminController::class, 'assignPlan']);
 
         // Category management
         Route::get('/categories', [AdminController::class, 'getCategories']);
