@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { MapPin, Phone, Star, Crown, CheckCircle } from 'lucide-react'
+import ShareButton from './Share/ShareButton';
 
 const BusinessCard = ({ business }) => {
   const renderRating = (rating) => {
@@ -87,14 +88,22 @@ const BusinessCard = ({ business }) => {
         )}
       </div>
 
-      <Link
-        to={`/business/${business.id}`}
-        className="w-full text-sm text-center btn btn-outline sm:text-base"
-      >
-        Voir les détails
-      </Link>
+      <div className="flex space-x-2">
+        <Link
+          to={`/business/${business.id}`}
+          className="flex-1 text-sm text-center btn btn-outline sm:text-base"
+        >
+          Voir les détails
+        </Link>
+        
+        {/* Bouton de partage compact */}
+        <ShareButton 
+          business={business} 
+          className="flex-shrink-0"
+        />
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default BusinessCard
+export default BusinessCard;

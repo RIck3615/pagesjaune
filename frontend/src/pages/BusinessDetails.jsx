@@ -23,12 +23,20 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Plus
+  Plus,
+  Share2, 
+  Facebook, 
+  Twitter, 
+  Linkedin, 
+  Mail as MailIcon, 
+  MessageCircle, 
+  Copy
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getImageUrl } from '../utils/images';
 import ReviewForm from '../components/Review/ReviewForm';
 import ReviewList from '../components/Review/ReviewList';
+import ShareButton from '../components/Share/ShareButton';
 
 const BusinessDetails = () => {
   const { id } = useParams()
@@ -243,13 +251,18 @@ const BusinessDetails = () => {
       <div className="p-6 mb-8 bg-white border rounded-lg shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
           <div className="flex-1">
-            <div className="flex items-center mb-4 space-x-3">
-              {business.is_premium && (
-                <Crown className="w-6 h-6 text-yellow-500" title="Entreprise premium" />
-              )}
-              {business.is_verified && (
-                <CheckCircle className="w-6 h-6 text-green-500" title="Entreprise vérifiée" />
-              )}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                {business.is_premium && (
+                  <Crown className="w-6 h-6 text-yellow-500" title="Entreprise premium" />
+                )}
+                {business.is_verified && (
+                  <CheckCircle className="w-6 h-6 text-green-500" title="Entreprise vérifiée" />
+                )}
+              </div>
+              
+              {/* Bouton de partage */}
+              <ShareButton business={business} />
             </div>
             
             <h1 className="mb-4 text-3xl font-bold text-gray-900">
@@ -317,7 +330,7 @@ const BusinessDetails = () => {
               
               {business.email && (
                 <div className="flex items-center space-x-3">
-                  <Mail className="w-5 h-5 text-gray-400" />
+                  <MailIcon className="w-5 h-5 text-gray-400" />
                   <a
                     href={`mailto:${business.email}`}
                     className="text-blue-600 hover:text-blue-700"

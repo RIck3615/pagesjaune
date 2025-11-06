@@ -21,7 +21,7 @@ class ReviewController extends Controller
         }
 
         // Filter by status (admin only)
-        if ($request->user()->isAdmin()) {
+        if ($request->user() && $request->user()->isAdmin()) {
             if ($request->has('status')) {
                 $query->where('status', $request->status);
             }
@@ -31,7 +31,7 @@ class ReviewController extends Controller
         }
 
         $reviews = $query->orderBy('created_at', 'desc')
-                        ->paginate(15);
+            ->paginate(15);
 
         return response()->json([
             'success' => true,
@@ -188,7 +188,7 @@ class ReviewController extends Controller
 
     public function myReviews(Request $request): JsonResponse
     {
-        $reviews = $request->user()->reviews()
+        $reviews = Review::where('user_id', $request->user()->id)
             ->with(['business'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
@@ -199,4 +199,3 @@ class ReviewController extends Controller
         ]);
     }
 }
-
